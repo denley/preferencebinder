@@ -1,39 +1,82 @@
 package me.denley.preferenceinjector;
 
 import android.app.Activity;
+import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.os.Handler;
+import android.os.Looper;
+import android.preference.PreferenceManager;
+import android.widget.CheckBox;
+import android.widget.SeekBar;
 
 
 public class MainActivity extends Activity {
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    private static final long PREFERENCE_CHANGE_INTERVAL_MS = 500;
+
+    CheckBox booleanPreferenceDisplay;
+    SeekBar integerPreferenceDisplay;
+
+    @InjectPreference(value = "boolean_pref_key", autoUpdate = true)
+    boolean booleanPrefValue;
+
+    Looper preferenceChangeLooper;
+    Handler handler;
+
+    Runnable externalPreferenceChanger = new Runnable(){
+        public void run(){
+            changePreferenceValues();
+            handler.postDelayed(externalPreferenceChanger, PREFERENCE_CHANGE_INTERVAL_MS);
+        }
+    };
+
+    @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        booleanPreferenceDisplay = (CheckBox) findViewById(R.id.pref_boolean);
+        integerPreferenceDisplay = (SeekBar) findViewById(R.id.pref_integer);
+
+        startHandlerOnBackgroundThread();
     }
 
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
+    @OnPreferenceChange(value = "integer_pref_key", initialize = true)
+    void onNewValue(int newValue){
+        integerPreferenceDisplay.setProgress(newValue);
+        booleanPreferenceDisplay.setChecked(booleanPrefValue);
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
+    private void startHandlerOnBackgroundThread(){
+        new Thread(){
+            public void run(){
+                startHandler();
+                Looper.loop();
+            }
+        }.start();
+    }
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+    private void startHandler(){
+        Looper.prepare();
+        preferenceChangeLooper = Looper.myLooper();
+        handler = new Handler(preferenceChangeLooper);
+        handler.postDelayed(externalPreferenceChanger, PREFERENCE_CHANGE_INTERVAL_MS);
+    }
+
+    private void changePreferenceValues(){
+        final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        final boolean booleanPrefValue = prefs.getBoolean("boolean_pref_key", false);
+        final int integerPrefValue = prefs.getInt("integer_pref_key", 0);
+
+        prefs.edit()
+                .putBoolean("boolean_pref_key", !booleanPrefValue)
+                .putInt("integer_pref_key", (integerPrefValue + 1) % 100)
+                .commit();
+    }
+
+    @Override protected void onDestroy() {
+        if(preferenceChangeLooper != null) {
+            preferenceChangeLooper.quit();
         }
-
-        return super.onOptionsItemSelected(item);
+        super.onDestroy();
     }
+
 }

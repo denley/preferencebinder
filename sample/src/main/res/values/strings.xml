@@ -2,7 +2,8 @@
 <resources>
 
     <string name="app_name">PreferenceInjector</string>
-    <string name="hello_world">Hello world!</string>
-    <string name="action_settings">Settings</string>
+
+    <string name="pref_boolean">Sample Boolean</string>
+    <string name="pref_integer">Sample Integer</string>
 
 </resources>
