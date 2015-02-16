@@ -12,7 +12,7 @@ import android.widget.SeekBar;
 
 public class MainActivity extends Activity {
 
-    private static final long PREFERENCE_CHANGE_INTERVAL_MS = 500;
+    private static final long PREFERENCE_CHANGE_INTERVAL_MS = 1000;
 
     CheckBox booleanPreferenceDisplay;
     SeekBar integerPreferenceDisplay;
@@ -35,6 +35,8 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         booleanPreferenceDisplay = (CheckBox) findViewById(R.id.pref_boolean);
         integerPreferenceDisplay = (SeekBar) findViewById(R.id.pref_integer);
+        PreferenceInjector.inject(MainActivity.this);
+        booleanPreferenceDisplay.setChecked(booleanPrefValue);
 
         startHandlerOnBackgroundThread();
     }
@@ -63,12 +65,12 @@ public class MainActivity extends Activity {
 
     private void changePreferenceValues(){
         final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        final boolean booleanPrefValue = prefs.getBoolean("boolean_pref_key", false);
-        final int integerPrefValue = prefs.getInt("integer_pref_key", 0);
+        final boolean booleanPrefValue = !prefs.getBoolean("boolean_pref_key", false);
+        final int integerPrefValue = (prefs.getInt("integer_pref_key", 0) + 1) % 100;
 
         prefs.edit()
-                .putBoolean("boolean_pref_key", !booleanPrefValue)
-                .putInt("integer_pref_key", (integerPrefValue + 1) % 100)
+                .putBoolean("boolean_pref_key", booleanPrefValue)
+                .putInt("integer_pref_key", integerPrefValue)
                 .commit();
     }
 

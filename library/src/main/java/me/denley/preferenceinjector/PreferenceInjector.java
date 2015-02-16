@@ -26,13 +26,11 @@ public final class PreferenceInjector {
     /** DO NOT USE: Exposed for generated code. */
     public interface Injector<T> {
         void inject(Context context, T target, SharedPreferences prefs);
-        void reset(T target);
     }
 
     static final Map<Class<?>, Injector<Object>> INJECTORS = new LinkedHashMap<Class<?>, Injector<Object>>();
     static final Injector<Object> NOP_INJECTOR = new Injector<Object>() {
         @Override public void inject(Context context, Object target, SharedPreferences prefs) { }
-        @Override public void reset(Object target) { }
     };
 
 
@@ -112,7 +110,7 @@ public final class PreferenceInjector {
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Unable to inject views for " + target, e);
+            throw new RuntimeException("Unable to inject preferences for " + target, e);
         }
     }
 

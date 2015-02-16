@@ -1,15 +1,13 @@
-apply plugin: 'com.android.library'
+apply plugin: 'java'
 
-android {
-    compileSdkVersion 21
-    buildToolsVersion "20.0.0"
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
 
-    defaultConfig {
-        minSdkVersion 1
-        targetSdkVersion 21
-    }
+configurations {
+    provided
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    provided 'com.google.android:android:1.5_r3'
+    compile 'com.google.android:android:1.5_r3'
 }
