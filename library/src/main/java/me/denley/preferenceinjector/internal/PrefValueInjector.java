@@ -2,6 +2,7 @@ package me.denley.preferenceinjector.internal;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 
 /**
@@ -101,8 +102,7 @@ public class PrefValueInjector {
 
         // Loop over each injection and emit it.
         for (PrefInjection injection : prefKeyMap.values()) {
-            emitInitialBindings(builder, injection);
-            builder.append("\n");
+            emitInitialization(builder, injection);
         }
 
         builder.append(INDENT_2).append("prefs.registerOnSharedPreferenceChangeListener(this);\n");
@@ -123,26 +123,50 @@ public class PrefValueInjector {
                 .append(INDENT).append("}\n\n");
     }
 
-    private void emitInitialBindings(StringBuilder builder, PrefInjection injection) {
-        Collection<Binding> bindings = injection.getBindings();
-        if (bindings.isEmpty()) {
-            return;
+    private void emitInitialization(StringBuilder builder, PrefInjection injection) {
+        Collection<Binding> initializationBindings = collectInitializationBindings(injection);
+        if (!initializationBindings.isEmpty()) {
+            emitInitialValueLoad(builder, injection);
+            emitInitializationSetters(builder, initializationBindings);
         }
+    }
 
-        emitInitialValueLoad(builder, injection);
-
-        for (Binding binding : bindings) {
-            if(binding instanceof PrefBinding) {
-                builder.append(INDENT_2);
-                emitFieldUpdate(builder, binding);
-            }else if(binding instanceof MethodBinding) {
-                MethodBinding asMethodBinding = (MethodBinding) binding;
-                if(asMethodBinding.isInitialize()){
-                    builder.append(INDENT_2);
-                    emitMethodCall(builder, binding);
-                }
+    private Collection<Binding> collectInitializationBindings(PrefInjection injection){
+        Collection<Binding> initializationBindings = new LinkedHashSet<>();
+        for (Binding binding : injection.getBindings()) {
+            if(isInitializationBinding(binding)){
+                initializationBindings.add(binding);
             }
         }
+        return initializationBindings;
+    }
+
+    private void emitInitializationSetters(StringBuilder builder, Collection<Binding> initializationBindings) {
+        for (Binding binding : initializationBindings) {
+            emitInitializationSetter(builder, binding);
+        }
+        builder.append("\n");
+    }
+
+    private void emitInitializationSetter(StringBuilder builder, Binding binding){
+        builder.append(INDENT_2);
+        if(binding instanceof MethodBinding) {
+            emitMethodCall(builder, binding);
+        } else {
+            emitFieldUpdate(builder, binding);
+        }
+    }
+
+    private boolean isInitializationBinding(Binding binding){
+        if(binding instanceof PrefBinding) {
+            return true;
+        }else if(binding instanceof MethodBinding) {
+            if(((MethodBinding) binding).isInitialize()){
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void emitInitialValueLoad(StringBuilder builder, PrefInjection injection){
@@ -157,40 +181,67 @@ public class PrefValueInjector {
         boolean hasStartedIfBlock = false;
 
         for (PrefInjection injection : prefKeyMap.values()) {
-            if(hasStartedIfBlock) {
-                builder.append(" else ");
-            } else{
-                builder.append(INDENT_2);
-                hasStartedIfBlock = true;
-            }
+            Collection<Binding> bindings = collectListenerBindings(injection);
 
-            builder.append("if (key.equals(\"")
-                    .append(injection.getKey())
-                    .append("\")) {\n");
-            builder.append(INDENT_3)
-                    .append("final Map<String, ?> prefsMap = prefs.getAll();\n");
-            builder.append(INDENT_3)
-                    .append("Object value = prefsMap.get(\"").append(injection.getKey()).append("\");\n");
-            emitListenerBindings(builder, injection);
-            builder.append(INDENT_2).append("}");
+            if(!bindings.isEmpty()) {
+                if (hasStartedIfBlock) {
+                    builder.append(" else ");
+                } else {
+                    builder.append(INDENT_2);
+                    hasStartedIfBlock = true;
+                }
+                emitListenerInjection(builder, injection, bindings);
+            }
         }
     }
 
-    private void emitListenerBindings(StringBuilder builder, PrefInjection injection) {
-        Collection<Binding> bindings = injection.getBindings();
+    private void emitListenerInjection(StringBuilder builder, PrefInjection injection, Collection<Binding> bindings){
+        builder.append("if (key.equals(\"")
+                .append(injection.getKey())
+                .append("\")) {\n");
+        builder.append(INDENT_3)
+                .append("final Map<String, ?> prefsMap = prefs.getAll();\n");
+        builder.append(INDENT_3)
+                .append("Object value = prefsMap.get(\"").append(injection.getKey()).append("\");\n");
+        emitListenerBindings(builder, bindings);
+        builder.append(INDENT_2).append("}");
+    }
 
+    private void emitListenerBindings(StringBuilder builder, Collection<Binding> bindings) {
         for (Binding binding : bindings) {
-            if(binding instanceof MethodBinding) {
-                builder.append(INDENT_3);
-                emitMethodCall(builder, binding);
-            } else if (binding instanceof PrefBinding) {
-                PrefBinding asPrefBinding = (PrefBinding)binding;
-                if(asPrefBinding.isAutoUpdate()){
-                    builder.append(INDENT_3);
-                    emitFieldUpdate(builder, binding);
-                }
+            emitListenerBinding(builder, binding);
+        }
+    }
+
+    private void emitListenerBinding(StringBuilder builder, Binding binding) {
+        builder.append(INDENT_3);
+        if(binding instanceof PrefBinding) {
+            emitFieldUpdate(builder, binding);
+        } else {
+            emitMethodCall(builder, binding);
+        }
+    }
+
+    private Collection<Binding> collectListenerBindings(PrefInjection injection){
+        Collection<Binding> listenerBindings = new LinkedHashSet<>();
+        for (Binding binding : injection.getBindings()) {
+            if(isListenerBinding(binding)){
+                listenerBindings.add(binding);
             }
         }
+        return listenerBindings;
+    }
+
+    private boolean isListenerBinding(Binding binding){
+        if(binding instanceof MethodBinding) {
+            return true;
+        } else if (binding instanceof PrefBinding) {
+            PrefBinding asPrefBinding = (PrefBinding)binding;
+            if(asPrefBinding.isAutoUpdate()){
+                return true;
+            }
+        }
+        return false;
     }
 
     private void emitFieldUpdate(StringBuilder builder, Binding binding){
