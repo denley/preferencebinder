@@ -62,6 +62,16 @@ public final class PreferenceInjector {
     }
 
     /**
+     * Inject annotated fields and methods in the specified {@link Object}.
+     *
+     * @param context The Context to use to load {@link SharedPreferences} values.
+     * @param target Target for field injection.
+     */
+    public static void inject(Context context, Object target){
+        inject(context, target, PreferenceManager.getDefaultSharedPreferences(context));
+    }
+
+    /**
      * Inject annotated fields and methods in the specified {@link Activity}.
      *
      * @param target Target for field injection.
@@ -91,12 +101,15 @@ public final class PreferenceInjector {
         inject(target.getContext(), target, prefsFileName);
     }
 
-    private static void inject(Context context, Object target, String prefsFileName){
+    /**
+     * Inject annotated fields and methods in the specified {@link Object}.
+     *
+     * @param context The Context to use to load {@link SharedPreferences} values.
+     * @param target Target for field injection.
+     * @param prefsFileName The name of the {@link android.content.SharedPreferences} file to use.
+     */
+    public static void inject(Context context, Object target, String prefsFileName){
         inject(context, target, context.getSharedPreferences(prefsFileName, Context.MODE_PRIVATE));
-    }
-
-    private static void inject(Context context, Object target){
-        inject(context, target, PreferenceManager.getDefaultSharedPreferences(context));
     }
 
     private static void inject(Context context, Object target, SharedPreferences prefs){
