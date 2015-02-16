@@ -43,6 +43,10 @@ public class MainActivity extends Activity {
     @OnPreferenceChange(value = "integer_pref_key", initialize = true)
     void onNewValue(int newValue){
         integerPreferenceDisplay.setProgress(newValue);
+    }
+
+    @OnPreferenceChange(value = "integer_pref_key", initialize = true)
+    void onNewValue2(int newValue){
         booleanPreferenceDisplay.setChecked(booleanPrefValue);
     }
 

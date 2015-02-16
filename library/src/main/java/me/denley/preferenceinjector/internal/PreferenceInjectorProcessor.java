@@ -5,7 +5,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -134,15 +133,6 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
         String name = annotatedElement.getSimpleName().toString();
         String type = annotatedElement.asType().toString();
 
-        if(isAlreadyInjected(enclosingElement, preferenceKey)){
-            error(annotatedElement,
-                    "Attempt to use @InjectPreference for an already injected key %s. (%s.%s)",
-                    preferenceKey,
-                    enclosingElement.getQualifiedName(),
-                    name);
-            return;
-        }
-
         PrefValueInjector injector = getOrCreateTargetClass(targetClassMap, enclosingElement);
         PrefBinding binding = new PrefBinding(name, type, autoUpdate);
         injector.addBinding(preferenceKey, binding);
@@ -175,25 +165,9 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
                 || isBindingInWrongPackage(InjectPreference.class, element);
     }
 
-    private boolean isAlreadyInjected(TypeElement baseElement, String preferenceKey){
-        PrefValueInjector injector = targetClassMap.get(baseElement);
-        return injector != null && hasBindingForKey(injector, preferenceKey);
-    }
-
-    private boolean hasBindingForKey(PrefValueInjector injector, String preferenceKey){
-        PrefInjection prefInjection = injector.getPrefInjection(preferenceKey);
-        return prefInjection != null && hasBindingForKey(prefInjection, preferenceKey);
-    }
-
-    private boolean hasBindingForKey(PrefInjection prefInjection, String preferenceKey){
-        Iterator<Binding> iterator = prefInjection.getBindings().iterator();
-        return iterator.hasNext();
-    }
-
     private void findAndParseOnPreferenceChangeAnnotations(RoundEnvironment env) {
         final Set<? extends Element> injectPreferenceAnnotations = env.getElementsAnnotatedWith(OnPreferenceChange.class);
         parseOnPreferenceChangeAnnotations(injectPreferenceAnnotations);
-        // TODO OnPreferenceChangeAnnotations
     }
 
     private void parseOnPreferenceChangeAnnotations(Set<? extends Element> injectPreferenceAnnotations) {
@@ -235,15 +209,6 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
         if(params.size() != 1){
             error(annotatedElement,
                     "Methods annotated with @OnPreferenceChange must have a single parameter. (%s.%s)",
-                    enclosingElement.getQualifiedName(),
-                    name);
-            return;
-        }
-
-        if(isAlreadyInjected(enclosingElement, preferenceKey)){
-            error(annotatedElement,
-                    "Attempt to use @OnPreferenceChange for an already injected key %s. (%s.%s)",
-                    preferenceKey,
                     enclosingElement.getQualifiedName(),
                     name);
             return;

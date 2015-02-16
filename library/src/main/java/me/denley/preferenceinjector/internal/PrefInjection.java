@@ -9,14 +9,20 @@ import java.util.Set;
  */
 public class PrefInjection {
     private final String key;
+    private final PrefType type;
     private final Set<Binding> bindings = new LinkedHashSet<>();
 
-    PrefInjection(String key) {
+    PrefInjection(String key, PrefType type) {
         this.key = key;
+        this.type = type;
     }
 
     public String getKey() {
         return key;
+    }
+
+    public PrefType getType() {
+        return type;
     }
 
     public Collection<Binding> getBindings() {

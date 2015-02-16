@@ -27,7 +27,7 @@ public class MethodBinding implements Binding {
     }
 
     @Override public String getDescription() {
-        return "field '" + name + "'";
+        return "method '" + name + "'";
     }
 
 }

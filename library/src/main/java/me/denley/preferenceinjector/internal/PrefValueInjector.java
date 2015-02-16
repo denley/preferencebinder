@@ -26,7 +26,7 @@ public class PrefValueInjector {
     }
 
     void addBinding(String key, Binding binding) {
-        getOrCreatePrefInjection(key).addBinding(binding);
+        getOrCreatePrefInjection(key, binding.getType()).addBinding(binding);
     }
 
     PrefInjection getPrefInjection(String key) {
@@ -37,11 +37,15 @@ public class PrefValueInjector {
         this.parentInjector = parentInjector;
     }
 
-    private PrefInjection getOrCreatePrefInjection(String key) {
+    private PrefInjection getOrCreatePrefInjection(String key, String typeDef) {
         PrefInjection viewId = prefKeyMap.get(key);
         if (viewId == null) {
-            viewId = new PrefInjection(key);
+            viewId = new PrefInjection(key, getType(key, typeDef));
             prefKeyMap.put(key, viewId);
+        }else {
+            if(!viewId.getType().getFieldTypeDef().equals(typeDef)){
+                throw new IllegalArgumentException("Inconsistent type definitions for key "+key);
+            }
         }
         return viewId;
     }
@@ -96,10 +100,6 @@ public class PrefValueInjector {
         builder.append(INDENT_2).append("this.target = target;\n");
         builder.append(INDENT_2).append("this.prefs = source;\n\n");
 
-        builder.append(INDENT_2).append("final Map<String, ?> prefsMap = prefs.getAll();\n");
-        // Local variable in which all values will be temporarily stored.
-        builder.append(INDENT_2).append("Object value;\n\n");
-
         // Loop over each injection and emit it.
         for (PrefInjection injection : prefKeyMap.values()) {
             emitInitialization(builder, injection);
@@ -127,7 +127,7 @@ public class PrefValueInjector {
         Collection<Binding> initializationBindings = collectInitializationBindings(injection);
         if (!initializationBindings.isEmpty()) {
             emitInitialValueLoad(builder, injection);
-            emitInitializationSetters(builder, initializationBindings);
+            emitInitializationSetters(builder, injection.getKey(), initializationBindings);
         }
     }
 
@@ -141,19 +141,19 @@ public class PrefValueInjector {
         return initializationBindings;
     }
 
-    private void emitInitializationSetters(StringBuilder builder, Collection<Binding> initializationBindings) {
+    private void emitInitializationSetters(StringBuilder builder, String key, Collection<Binding> initializationBindings) {
         for (Binding binding : initializationBindings) {
-            emitInitializationSetter(builder, binding);
+            emitInitializationSetter(builder, key, binding);
         }
         builder.append("\n");
     }
 
-    private void emitInitializationSetter(StringBuilder builder, Binding binding){
+    private void emitInitializationSetter(StringBuilder builder, String key, Binding binding){
         builder.append(INDENT_2);
         if(binding instanceof MethodBinding) {
-            emitMethodCall(builder, binding);
+            emitMethodCall(builder, key, binding);
         } else {
-            emitFieldUpdate(builder, binding);
+            emitFieldUpdate(builder,key,  binding);
         }
     }
 
@@ -172,9 +172,16 @@ public class PrefValueInjector {
     private void emitInitialValueLoad(StringBuilder builder, PrefInjection injection){
         // Example: value = prefsMap.get("this_key");
         builder.append(INDENT_2)
-                .append("value = prefsMap.get(\"")
+                .append(injection.getType().getFieldTypeDef())
+                .append(" ")
                 .append(injection.getKey())
-                .append("\");\n");
+                .append(" = prefs.")
+                .append(injection.getType().getSharedPrefsMethodName())
+                .append("(\"")
+                .append(injection.getKey())
+                .append("\", ")
+                .append(injection.getType().getDefaultValue())
+                .append(");\n");
     }
 
     private void emitListenerInjections(StringBuilder builder){
@@ -199,26 +206,35 @@ public class PrefValueInjector {
         builder.append("if (key.equals(\"")
                 .append(injection.getKey())
                 .append("\")) {\n");
+
         builder.append(INDENT_3)
-                .append("final Map<String, ?> prefsMap = prefs.getAll();\n");
-        builder.append(INDENT_3)
-                .append("Object value = prefsMap.get(\"").append(injection.getKey()).append("\");\n");
-        emitListenerBindings(builder, bindings);
+                .append(injection.getType().getFieldTypeDef())
+                .append(" ")
+                .append(injection.getKey())
+                .append(" = prefs.")
+                .append(injection.getType().getSharedPrefsMethodName())
+                .append("(\"")
+                .append(injection.getKey())
+                .append("\", ")
+                .append(injection.getType().getDefaultValue())
+                .append(");\n");
+
+        emitListenerBindings(builder, injection.getKey(), bindings);
         builder.append(INDENT_2).append("}");
     }
 
-    private void emitListenerBindings(StringBuilder builder, Collection<Binding> bindings) {
+    private void emitListenerBindings(StringBuilder builder, String key, Collection<Binding> bindings) {
         for (Binding binding : bindings) {
-            emitListenerBinding(builder, binding);
+            emitListenerBinding(builder, key, binding);
         }
     }
 
-    private void emitListenerBinding(StringBuilder builder, Binding binding) {
+    private void emitListenerBinding(StringBuilder builder, String key, Binding binding) {
         builder.append(INDENT_3);
         if(binding instanceof PrefBinding) {
-            emitFieldUpdate(builder, binding);
+            emitFieldUpdate(builder, key, binding);
         } else {
-            emitMethodCall(builder, binding);
+            emitMethodCall(builder, key, binding);
         }
     }
 
@@ -244,22 +260,33 @@ public class PrefValueInjector {
         return false;
     }
 
-    private void emitFieldUpdate(StringBuilder builder, Binding binding){
+    private void emitFieldUpdate(StringBuilder builder, String key, Binding binding){
         // Example: target.targetVariable = (String) value;
         builder.append("target.")
                 .append(binding.getName())
-                .append(" = (")
-                .append(binding.getType())
-                .append(") value;\n");
+                .append(" = ")
+                .append(key)
+                .append(";\n");
     }
 
-    private void emitMethodCall(StringBuilder builder, Binding binding){
+    private void emitMethodCall(StringBuilder builder, String key, Binding binding){
         // Example: target.targetMethod( (String) value);
         builder.append("target.")
                 .append(binding.getName())
-                .append("( (")
-                .append(binding.getType())
-                .append(") value);\n");
+                .append("(")
+                .append(key)
+                .append(");\n");
+    }
+
+    private PrefType getType(String key, String typeDef){
+        for(PrefType type:PrefType.values()){
+            if(type.getFieldTypeDef().equals(typeDef)){
+                return type;
+            }
+        }
+
+        throw new IllegalArgumentException("Invalid preference value type ("
+                +typeDef+") for key "+key);
     }
 
 }
