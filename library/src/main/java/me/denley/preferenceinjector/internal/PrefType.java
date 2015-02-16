@@ -9,7 +9,7 @@ public enum PrefType {
     INTEGER("int", "getInt", "0"),
     LONG("long", "getLong", "0"),
     STRING("String", "getString", "null"),
-    STRING_SET("StringSet", "getStringSet", "null");
+    STRING_SET("Set<String>", "getStringSet", "null");
 
     private String fieldTypeDef;
     private String methodName;
