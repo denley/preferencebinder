@@ -26,11 +26,13 @@ public final class PreferenceInjector {
     /** DO NOT USE: Exposed for generated code. */
     public interface Injector<T> {
         void inject(Context context, T target, SharedPreferences prefs);
+        void stopListening();
     }
 
     static final Map<Class<?>, Injector<Object>> INJECTORS = new LinkedHashMap<Class<?>, Injector<Object>>();
     static final Injector<Object> NOP_INJECTOR = new Injector<Object>() {
         @Override public void inject(Context context, Object target, SharedPreferences prefs) { }
+        @Override public void stopListening() {}
     };
 
 
@@ -108,8 +110,22 @@ public final class PreferenceInjector {
      * @param target Target for field injection.
      * @param prefsFileName The name of the {@link android.content.SharedPreferences} file to use.
      */
-    public static void inject(Context context, Object target, String prefsFileName){
+    public static void inject(Context context, Object target, String prefsFileName) {
         inject(context, target, context.getSharedPreferences(prefsFileName, Context.MODE_PRIVATE));
+    }
+
+    /**
+     * Stops receiving preference value changes on the given target.
+     *
+     * @param target Target for field injection.
+     */
+    public static void stopListening(Object target){
+        Class<?> targetClass = target.getClass();
+
+        Injector<Object> injector = INJECTORS.get(targetClass);
+        if (injector != null) {
+            injector.stopListening();
+        }
     }
 
     private static void inject(Context context, Object target, SharedPreferences prefs){

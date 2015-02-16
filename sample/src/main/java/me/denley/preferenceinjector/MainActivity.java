@@ -12,7 +12,7 @@ import android.widget.SeekBar;
 
 public class MainActivity extends Activity {
 
-    private static final long PREFERENCE_CHANGE_INTERVAL_MS = 1000;
+    private static final long PREFERENCE_CHANGE_INTERVAL_MS = 500;
 
     CheckBox booleanPreferenceDisplay;
     SeekBar integerPreferenceDisplay;
@@ -75,6 +75,7 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onDestroy() {
+        PreferenceInjector.stopListening(this);
         if(preferenceChangeLooper != null) {
             preferenceChangeLooper.quit();
         }

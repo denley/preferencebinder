@@ -76,7 +76,8 @@ public class PrefValueInjector {
     }
 
     private void emitInject(StringBuilder builder) {
-        builder.append("  T target;\n\n");
+        builder.append("  T target;\n");
+        builder.append("  SharedPreferences prefs;\n\n");
 
         builder.append("  @Override public void inject(final Context context, final T target, SharedPreferences source) {\n");
 
@@ -85,9 +86,10 @@ public class PrefValueInjector {
             builder.append("    super.inject(context, target, source);\n\n");
         }
 
-        builder.append("    this.target = target;\n\n");
+        builder.append("    this.target = target;\n");
+        builder.append("    this.prefs = source;\n\n");
 
-        builder.append("    final Map<String, ?> prefsMap = source.getAll();\n");
+        builder.append("    final Map<String, ?> prefsMap = prefs.getAll();\n");
         // Local variable in which all values will be temporarily stored.
         builder.append("    Object value;\n\n");
 
@@ -97,10 +99,10 @@ public class PrefValueInjector {
             builder.append("\n");
         }
 
-        builder.append("    source.registerOnSharedPreferenceChangeListener(this);\n");
+        builder.append("    prefs.registerOnSharedPreferenceChangeListener(this);\n");
         builder.append("  }\n\n");
 
-        builder.append("  public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {\n");
+        builder.append("  @Override public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {\n");
 
         // Loop over each injection and emit it.
         for (PrefInjection injection : prefKeyMap.values()) {
@@ -108,6 +110,10 @@ public class PrefValueInjector {
         }
 
         builder.append("\n  }\n\n");
+
+        builder.append("  @Override public void stopListening() {\n")
+                .append("    prefs.unregisterOnSharedPreferenceChangeListener(this);\n")
+                .append("  }\n\n");
     }
 
     private void emitPrefInjection(StringBuilder builder, PrefInjection injection) {
