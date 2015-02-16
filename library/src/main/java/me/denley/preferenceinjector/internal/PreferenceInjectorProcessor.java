@@ -8,6 +8,7 @@ import java.lang.annotation.Annotation;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -17,8 +18,10 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -30,6 +33,7 @@ import me.denley.preferenceinjector.InjectPreference;
 import me.denley.preferenceinjector.OnPreferenceChange;
 
 import static javax.lang.model.element.ElementKind.CLASS;
+import static javax.lang.model.element.ElementKind.METHOD;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.STATIC;
 import static javax.tools.Diagnostic.Kind.ERROR;
@@ -113,7 +117,7 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
             StringWriter stackTrace = new StringWriter();
             e.printStackTrace(new PrintWriter(stackTrace));
 
-            error(annotatedElement, "Unable to generate view injector for @InjectView.\n\n%s", stackTrace);
+            error(annotatedElement, "Unable to generate preference injector for @InjectPreference.\n\n%s", stackTrace);
         }
     }
 
@@ -180,13 +184,78 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
     }
 
     private boolean hasBindingForKey(PrefInjection prefInjection, String preferenceKey){
-        Iterator<PrefBinding> iterator = prefInjection.getPrefBindings().iterator();
+        Iterator<Binding> iterator = prefInjection.getBindings().iterator();
         return iterator.hasNext();
     }
 
     private void findAndParseOnPreferenceChangeAnnotations(RoundEnvironment env) {
+        final Set<? extends Element> injectPreferenceAnnotations = env.getElementsAnnotatedWith(OnPreferenceChange.class);
+        parseOnPreferenceChangeAnnotations(injectPreferenceAnnotations);
         // TODO OnPreferenceChangeAnnotations
-        // OnPreferenceChange.class
+    }
+
+    private void parseOnPreferenceChangeAnnotations(Set<? extends Element> injectPreferenceAnnotations) {
+        for (Element element : injectPreferenceAnnotations) {
+            parseOnPreferenceChangeAnnotationOrFail(element);
+        }
+    }
+
+    private void parseOnPreferenceChangeAnnotationOrFail(Element annotatedElement) {
+        try {
+            parseOnPreferenceChangeAnnotation(annotatedElement);
+        } catch (Exception e) {
+            StringWriter stackTrace = new StringWriter();
+            e.printStackTrace(new PrintWriter(stackTrace));
+            error(annotatedElement, "Unable to generate preference injector for @OnPreferenceChange.\n\n%s", stackTrace);
+        }
+    }
+
+    private void parseOnPreferenceChangeAnnotation(Element annotatedElement) {
+        if (onPreferenceChangeAnnotationHasError(annotatedElement)) {
+            return;
+        }
+
+        // This should be guarded by the annotation's @Target but it's worth a check for safe casting.
+        if (!(annotatedElement instanceof ExecutableElement) || annotatedElement.getKind() != METHOD) {
+            throw new IllegalStateException(
+                    String.format("@%s annotation must be on a method.", annotatedElement.getSimpleName()));
+        }
+
+        // Assemble information on the injection point.
+        ExecutableElement executableElement = (ExecutableElement) annotatedElement;
+        TypeElement enclosingElement = (TypeElement) annotatedElement.getEnclosingElement();
+        String preferenceKey = annotatedElement.getAnnotation(OnPreferenceChange.class).value();
+        String name = annotatedElement.getSimpleName().toString();
+        List<? extends VariableElement> params = executableElement.getParameters();
+
+        if(params.size() != 1){
+            error(annotatedElement,
+                    "Methods annotated with @OnPreferenceChange must have a single parameter. (%s.%s)",
+                    enclosingElement.getQualifiedName(),
+                    name);
+            return;
+        }
+
+        if(isAlreadyInjected(enclosingElement, preferenceKey)){
+            error(annotatedElement,
+                    "Attempt to use @OnPreferenceChange for an already injected key %s. (%s.%s)",
+                    preferenceKey,
+                    enclosingElement.getQualifiedName(),
+                    name);
+            return;
+        }
+
+        PrefValueInjector injector = getOrCreateTargetClass(targetClassMap, enclosingElement);
+        MethodBinding binding = new MethodBinding(name, params.get(0).asType().toString());
+        injector.addBinding(preferenceKey, binding);
+
+        // Add the type-erased version to the valid injection targets set.
+        erasedTargetNames.add(enclosingElement.toString());
+    }
+
+    private boolean onPreferenceChangeAnnotationHasError(Element element){
+        return isInaccessibleViaGeneratedCode(OnPreferenceChange.class, "methods", element)
+                || isBindingInWrongPackage(OnPreferenceChange.class, element);
     }
 
     private void findAndSetParentInjectors(){

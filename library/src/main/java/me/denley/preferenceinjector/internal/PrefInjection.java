@@ -9,7 +9,7 @@ import java.util.Set;
  */
 public class PrefInjection {
     private final String key;
-    private final Set<PrefBinding> bindings = new LinkedHashSet<>();
+    private final Set<Binding> bindings = new LinkedHashSet<>();
 
     PrefInjection(String key) {
         this.key = key;
@@ -19,12 +19,12 @@ public class PrefInjection {
         return key;
     }
 
-    public Collection<PrefBinding> getPrefBindings() {
+    public Collection<Binding> getBindings() {
         return bindings;
     }
 
-    public void addPrefBinding(PrefBinding viewBinding) {
-        bindings.add(viewBinding);
+    public void addBinding(Binding binding) {
+        bindings.add(binding);
     }
 
 }

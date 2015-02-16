@@ -3,20 +3,20 @@ package me.denley.preferenceinjector.internal;
 /**
  * Created by Denley on 16/02/2015.
  */
-public class PrefBinding implements Binding {
+public class MethodBinding implements Binding {
     private final String name;
     private final String type;
 
-    public PrefBinding(String name, String type) {
+    public MethodBinding(String name, String type) {
         this.name = name;
         this.type = type;
     }
 
-    @Override public String getName(){
+    public String getName(){
         return name;
     }
 
-    @Override public String getType(){
+    public String getType(){
         return type;
     }
 

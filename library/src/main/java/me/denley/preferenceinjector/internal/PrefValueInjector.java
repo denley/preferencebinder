@@ -20,8 +20,8 @@ public class PrefValueInjector {
         this.targetClass = targetClass;
     }
 
-    void addBinding(String key, PrefBinding binding) {
-        getOrCreatePrefInjection(key).addPrefBinding(binding);
+    void addBinding(String key, Binding binding) {
+        getOrCreatePrefInjection(key).addBinding(binding);
     }
 
     PrefInjection getPrefInjection(String key) {
@@ -65,7 +65,7 @@ public class PrefValueInjector {
         if (parentInjector != null) {
             builder.append(" extends ").append(parentInjector).append("<T>");
         } else {
-            builder.append(" implements Injector<T>");
+            builder.append(" implements Injector<T>, SharedPreferences.OnSharedPreferenceChangeListener");
         }
         builder.append(" {\n");
 
@@ -76,24 +76,38 @@ public class PrefValueInjector {
     }
 
     private void emitInject(StringBuilder builder) {
-        builder.append("  @Override ")
-                .append("public void inject(final Context context, final T target, SharedPreferences source) {\n");
+        builder.append("  T target;\n\n");
+
+        builder.append("  @Override public void inject(final Context context, final T target, SharedPreferences source) {\n");
 
         // Emit a call to the superclass injector, if any.
         if (parentInjector != null) {
             builder.append("    super.inject(context, target, source);\n\n");
         }
 
+        builder.append("    this.target = target;\n\n");
+
         builder.append("    final Map<String, ?> prefsMap = source.getAll();\n");
         // Local variable in which all values will be temporarily stored.
-        builder.append("    Object value;\n");
+        builder.append("    Object value;\n\n");
 
-        // Loop over each view injection and emit it.
+        // Loop over each injection and emit it.
         for (PrefInjection injection : prefKeyMap.values()) {
             emitPrefInjection(builder, injection);
+            builder.append("\n");
         }
 
-        builder.append("  }\n");
+        builder.append("    source.registerOnSharedPreferenceChangeListener(this);\n");
+        builder.append("  }\n\n");
+
+        builder.append("  public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {\n");
+
+        // Loop over each injection and emit it.
+        for (PrefInjection injection : prefKeyMap.values()) {
+            emitMethodBindings(builder, injection);
+        }
+
+        builder.append("\n  }\n\n");
     }
 
     private void emitPrefInjection(StringBuilder builder, PrefInjection injection) {
@@ -106,19 +120,64 @@ public class PrefValueInjector {
     }
 
     private void emitPrefBindings(StringBuilder builder, PrefInjection injection) {
-        Collection<PrefBinding> bindings = injection.getPrefBindings();
+        Collection<Binding> bindings = injection.getBindings();
         if (bindings.isEmpty()) {
             return;
         }
 
         // Example: target.targetVariable = (String) value;
-        for (PrefBinding binding : bindings) {
-            builder.append("    target.")
-                    .append(binding.getName())
-                    .append(" = (")
-                    .append(binding.getType())
-                    .append(") value;\n");
+        for (Binding binding : bindings) {
+            if(binding instanceof PrefBinding) {
+                builder.append("    target.")
+                        .append(binding.getName())
+                        .append(" = (")
+                        .append(binding.getType())
+                        .append(") value;\n");
+            }
         }
+    }
+
+    private void emitMethodBindings(StringBuilder builder, PrefInjection injection) {
+        Collection<Binding> bindings = injection.getBindings();
+        if (bindings.isEmpty()) {
+            return;
+        }
+
+        boolean hasStartedIfBlock = false;
+
+        // Example: target.targetMethod( (String) value);
+        for (Binding binding : bindings) {
+            if(binding instanceof MethodBinding) {
+
+                if(hasStartedIfBlock) {
+                    builder.append(" else ");
+                } else{
+                    builder.append("    ");
+                    hasStartedIfBlock = true;
+                }
+
+                emitMethodBinding(builder, injection, binding);
+            }
+        }
+    }
+
+    private void emitMethodBinding(StringBuilder builder, PrefInjection injection, Binding binding){
+        builder.append("if (key.equalsIgnoreCase(\"")
+                .append(injection.getKey())
+                .append("\")) {\n");
+
+        builder.append("      final Map<String, ?> prefsMap = prefs.getAll();\n");
+        builder.append("      Object value = prefsMap.get(\"")
+                .append(injection.getKey())
+                .append("\");\n");
+
+        builder.append("      target.")
+                .append(binding.getName())
+                .append("( (")
+                .append(binding.getType())
+                .append(") value);\n");
+
+        builder.append("    }");
     }
 
 }
