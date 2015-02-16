@@ -36,7 +36,6 @@ public class MainActivity extends Activity {
         booleanPreferenceDisplay = (CheckBox) findViewById(R.id.pref_boolean);
         integerPreferenceDisplay = (SeekBar) findViewById(R.id.pref_integer);
         PreferenceInjector.inject(this);
-        booleanPreferenceDisplay.setChecked(booleanPrefValue);
 
         startHandlerOnBackgroundThread();
     }

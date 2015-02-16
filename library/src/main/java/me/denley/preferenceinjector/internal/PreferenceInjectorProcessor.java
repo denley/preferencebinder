@@ -128,7 +128,9 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
 
         // Assemble information on the injection point.
         TypeElement enclosingElement = (TypeElement) annotatedElement.getEnclosingElement();
-        String preferenceKey = annotatedElement.getAnnotation(InjectPreference.class).value();
+        final InjectPreference annotation = annotatedElement.getAnnotation(InjectPreference.class);
+        boolean autoUpdate = annotation.autoUpdate();
+        String preferenceKey = annotation.value();
         String name = annotatedElement.getSimpleName().toString();
         String type = annotatedElement.asType().toString();
 
@@ -142,7 +144,7 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
         }
 
         PrefValueInjector injector = getOrCreateTargetClass(targetClassMap, enclosingElement);
-        PrefBinding binding = new PrefBinding(name, type);
+        PrefBinding binding = new PrefBinding(name, type, autoUpdate);
         injector.addBinding(preferenceKey, binding);
 
         // Add the type-erased version to the valid injection targets set.
@@ -224,7 +226,9 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
         // Assemble information on the injection point.
         ExecutableElement executableElement = (ExecutableElement) annotatedElement;
         TypeElement enclosingElement = (TypeElement) annotatedElement.getEnclosingElement();
-        String preferenceKey = annotatedElement.getAnnotation(OnPreferenceChange.class).value();
+        OnPreferenceChange annotation = annotatedElement.getAnnotation(OnPreferenceChange.class);
+        String preferenceKey = annotation.value();
+        boolean initialize = annotation.initialize();
         String name = annotatedElement.getSimpleName().toString();
         List<? extends VariableElement> params = executableElement.getParameters();
 
@@ -246,7 +250,8 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
         }
 
         PrefValueInjector injector = getOrCreateTargetClass(targetClassMap, enclosingElement);
-        MethodBinding binding = new MethodBinding(name, params.get(0).asType().toString());
+        String paramType = params.get(0).asType().toString();
+        MethodBinding binding = new MethodBinding(name, paramType, initialize);
         injector.addBinding(preferenceKey, binding);
 
         // Add the type-erased version to the valid injection targets set.

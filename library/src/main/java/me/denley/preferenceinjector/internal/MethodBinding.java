@@ -6,18 +6,24 @@ package me.denley.preferenceinjector.internal;
 public class MethodBinding implements Binding {
     private final String name;
     private final String type;
+    private final boolean initialize;
 
-    public MethodBinding(String name, String type) {
+    public MethodBinding(String name, String type, boolean initialize) {
         this.name = name;
         this.type = type;
+        this.initialize = initialize;
     }
 
-    public String getName(){
+    @Override public String getName(){
         return name;
     }
 
-    public String getType(){
+    @Override public String getType(){
         return type;
+    }
+
+    public boolean isInitialize(){
+        return initialize;
     }
 
     @Override public String getDescription() {
