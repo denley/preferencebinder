@@ -56,9 +56,21 @@ public class PrefValueInjector {
 
     String brewJava() {
         StringBuilder builder = new StringBuilder();
+
         builder.append("// Generated code from Preference Injector. Do not modify!\n");
         builder.append("package ").append(classPackage).append(";\n\n");
+        emitImports(builder);
+        emitClassDefinition(builder);
+        emitMemberVariables(builder);
+        emitInjectMethod(builder);
+        emitOnSharedPreferenceChangedMethod(builder);
+        emitStopListeningMethod(builder);
+        builder.append("}\n");
 
+        return builder.toString();
+    }
+
+    private void emitImports(StringBuilder builder){
         builder.append("import android.view.View;\n");
         builder.append("import android.content.Context;\n");
         builder.append("import android.content.SharedPreferences;\n");
@@ -67,7 +79,9 @@ public class PrefValueInjector {
             builder.append("import me.denley.preferenceinjector.PreferenceInjector.Injector;\n");
         }
         builder.append('\n');
+    }
 
+    private void emitClassDefinition(StringBuilder builder) {
         builder.append("public class ").append(className);
         builder.append("<T extends ").append(targetClass).append(">");
 
@@ -77,37 +91,36 @@ public class PrefValueInjector {
             builder.append(" implements Injector<T>, SharedPreferences.OnSharedPreferenceChangeListener");
         }
         builder.append(" {\n");
-
-        emitInject(builder);
-
-        builder.append("}\n");
-        return builder.toString();
     }
 
-    private void emitInject(StringBuilder builder) {
+    private void emitMemberVariables(StringBuilder builder) {
         builder.append(INDENT).append("T target;\n");
         builder.append(INDENT).append("SharedPreferences prefs;\n\n");
+    }
 
+    private void emitInjectMethod(StringBuilder builder){
         builder.append(INDENT)
-                .append("@Override public void inject(final Context context, final T target, SharedPreferences source) {\n");
+                .append("@Override public void inject")
+                .append("(Context context, T target, SharedPreferences source) {\n");
 
         // Emit a call to the superclass injector, if any.
         if (parentInjector != null) {
-            builder.append(INDENT_2)
-                    .append("super.inject(context, target, source);\n\n");
+            builder.append(INDENT_2).append("super.inject(context, target, source);\n\n");
         }
 
         builder.append(INDENT_2).append("this.target = target;\n");
         builder.append(INDENT_2).append("this.prefs = source;\n\n");
 
-        // Loop over each injection and emit it.
+        // Loop over each initialization and emit it.
         for (PrefInjection injection : prefKeyMap.values()) {
             emitInitialization(builder, injection);
         }
 
         builder.append(INDENT_2).append("prefs.registerOnSharedPreferenceChangeListener(this);\n");
         builder.append(INDENT).append("}\n\n");
+    }
 
+    private void emitOnSharedPreferenceChangedMethod(StringBuilder builder){
         builder.append(INDENT).append("@Override public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {\n");
 
         emitListenerInjections(builder);
@@ -115,7 +128,9 @@ public class PrefValueInjector {
         builder.append("\n")
                 .append(INDENT)
                 .append("}\n\n");
+    }
 
+    private void emitStopListeningMethod(StringBuilder builder){
         builder.append(INDENT)
                 .append("@Override public void stopListening() {\n")
                 .append(INDENT_2)
@@ -170,7 +185,6 @@ public class PrefValueInjector {
     }
 
     private void emitInitialValueLoad(StringBuilder builder, PrefInjection injection){
-        // Example: value = prefsMap.get("this_key");
         builder.append(INDENT_2)
                 .append(injection.getType().getFieldTypeDef())
                 .append(" ")
@@ -261,7 +275,6 @@ public class PrefValueInjector {
     }
 
     private void emitFieldUpdate(StringBuilder builder, String key, Binding binding){
-        // Example: target.targetVariable = (String) value;
         builder.append("target.")
                 .append(binding.getName())
                 .append(" = ")
@@ -270,7 +283,6 @@ public class PrefValueInjector {
     }
 
     private void emitMethodCall(StringBuilder builder, String key, Binding binding){
-        // Example: target.targetMethod( (String) value);
         builder.append("target.")
                 .append(binding.getName())
                 .append("(")
