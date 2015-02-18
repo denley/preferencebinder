@@ -49,10 +49,9 @@ Similarly, you can specify that methods should be called with the initial value 
 How to Include in Your Project
 --------
 
-Add the following lines to the gradle dependencies for your module.
+Add the following line to the gradle dependencies for your module.
 ```
 compile 'me.denley.preferenceinjector:PreferenceInjector:1.0'
-provided 'me.denley.preferenceinjector:PreferenceInjector:1.0'
 ```
 
 License
