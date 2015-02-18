@@ -4,6 +4,7 @@ package me.denley.preferenceinjector.internal;
  * Created by Denley on 17/02/2015.
  */
 public enum PrefType {
+    // Defaults are arbitrary as we always check that a value exists
     BOOLEAN("boolean", "getBoolean", "false"),
     FLOAT("float", "getFloat", "0"),
     INTEGER("int", "getInt", "0"),

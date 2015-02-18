@@ -12,6 +12,7 @@ public class PrefValueInjector {
     private static final String INDENT = "    ";
     private static final String INDENT_2 = "        ";
     private static final String INDENT_3 = "            ";
+    private static final String INDENT_4 = "                ";
 
     private final Map<String, PrefInjection> prefKeyMap = new LinkedHashMap<>();
     private final String classPackage;
@@ -113,7 +114,7 @@ public class PrefValueInjector {
 
         // Loop over each initialization and emit it.
         for (PrefInjection injection : prefKeyMap.values()) {
-            emitInitialization(builder, injection);
+            emitInitializationIfNecessary(builder, injection);
         }
 
         builder.append(INDENT_2).append("prefs.registerOnSharedPreferenceChangeListener(this);\n");
@@ -122,9 +123,7 @@ public class PrefValueInjector {
 
     private void emitOnSharedPreferenceChangedMethod(StringBuilder builder){
         builder.append(INDENT).append("@Override public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {\n");
-
         emitListenerInjections(builder);
-
         builder.append("\n")
                 .append(INDENT)
                 .append("}\n\n");
@@ -138,12 +137,21 @@ public class PrefValueInjector {
                 .append(INDENT).append("}\n\n");
     }
 
-    private void emitInitialization(StringBuilder builder, PrefInjection injection) {
+    private void emitInitializationIfNecessary(StringBuilder builder, PrefInjection injection) {
         Collection<Binding> initializationBindings = collectInitializationBindings(injection);
         if (!initializationBindings.isEmpty()) {
-            emitInitialValueLoad(builder, injection);
-            emitInitializationSetters(builder, injection.getKey(), initializationBindings);
+            emitInitialization(builder, injection, initializationBindings);
         }
+    }
+
+    private void emitInitialization(StringBuilder builder, PrefInjection injection, Collection<Binding> initializationBindings){
+        builder.append(INDENT_2)
+                .append("if (prefs.contains(\"")
+                .append(injection.getKey())
+                .append("\")) {\n");
+        emitInitialValueLoad(builder, injection);
+        emitInitializationSetters(builder, injection.getKey(), initializationBindings);
+        builder.append(INDENT_2).append("}\n\n");
     }
 
     private Collection<Binding> collectInitializationBindings(PrefInjection injection){
@@ -160,11 +168,10 @@ public class PrefValueInjector {
         for (Binding binding : initializationBindings) {
             emitInitializationSetter(builder, key, binding);
         }
-        builder.append("\n");
     }
 
     private void emitInitializationSetter(StringBuilder builder, String key, Binding binding){
-        builder.append(INDENT_2);
+        builder.append(INDENT_3);
         if(binding instanceof MethodBinding) {
             emitMethodCall(builder, key, binding);
         } else {
@@ -185,7 +192,7 @@ public class PrefValueInjector {
     }
 
     private void emitInitialValueLoad(StringBuilder builder, PrefInjection injection){
-        builder.append(INDENT_2)
+        builder.append(INDENT_3)
                 .append(injection.getType().getFieldTypeDef())
                 .append(" ")
                 .append(injection.getKey())
@@ -211,17 +218,26 @@ public class PrefValueInjector {
                     builder.append(INDENT_2);
                     hasStartedIfBlock = true;
                 }
-                emitListenerInjection(builder, injection, bindings);
+                emitListenerInjectionIfBlock(builder, injection, bindings);
             }
         }
     }
 
-    private void emitListenerInjection(StringBuilder builder, PrefInjection injection, Collection<Binding> bindings){
+    private void emitListenerInjectionIfBlock(StringBuilder builder, PrefInjection injection, Collection<Binding> bindings){
         builder.append("if (key.equals(\"")
                 .append(injection.getKey())
                 .append("\")) {\n");
+        emitListenerInjection(builder, injection, bindings);
+        builder.append(INDENT_2).append("}");
+    }
 
+    private void emitListenerInjection(StringBuilder builder, PrefInjection injection, Collection<Binding> bindings){
         builder.append(INDENT_3)
+                .append("if (prefs.contains(\"")
+                .append(injection.getKey())
+                .append("\")) {\n");
+
+        builder.append(INDENT_4)
                 .append(injection.getType().getFieldTypeDef())
                 .append(" ")
                 .append(injection.getKey())
@@ -234,7 +250,7 @@ public class PrefValueInjector {
                 .append(");\n");
 
         emitListenerBindings(builder, injection.getKey(), bindings);
-        builder.append(INDENT_2).append("}");
+        builder.append(INDENT_3).append("}\n");
     }
 
     private void emitListenerBindings(StringBuilder builder, String key, Collection<Binding> bindings) {
@@ -244,7 +260,7 @@ public class PrefValueInjector {
     }
 
     private void emitListenerBinding(StringBuilder builder, String key, Binding binding) {
-        builder.append(INDENT_3);
+        builder.append(INDENT_4);
         if(binding instanceof PrefBinding) {
             emitFieldUpdate(builder, key, binding);
         } else {
