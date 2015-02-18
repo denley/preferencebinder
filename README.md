@@ -22,9 +22,11 @@ void valueChanged(String valueOfPreference) {
 }
 ```
 
-You can then call the following method from anywhere in your target class, to inject the preferences and begin listening for changes (a likely place for this is in an `Activity`'s `onCreate` method):
+<br/>
+Then call the following method from anywhere in your target class, to inject the preferences and begin listening for changes (a likely place for this is in an `Activity`'s `onCreate` method):
 ```
-PreferenceInjector.init(this); // For certain class types, you may have to add a Context argument too
+// In certain class types, you may have to add a Context argument too
+PreferenceInjector.init(this);
 ```
 
 Be sure to cancel your listeners when you no longer want updates (e.g. in your `Activity`'s `onDestroy` method):
@@ -32,7 +34,7 @@ Be sure to cancel your listeners when you no longer want updates (e.g. in your `
 PreferenceInjector.stopListening(this);
 ```
 
-
+<br/>
 You can also specify for fields to be updated automatically when the preference value changes:
 ```
 @InjectPreference(value = "my_preference_key", autoUpdate = true)
@@ -47,9 +49,10 @@ Similarly, you can specify that methods should be called with the initial value 
 How to Include in Your Project
 --------
 
-Add the following line to the gradle dependencies for your module.
+Add the following lines to the gradle dependencies for your module.
 ```
 compile 'me.denley.preferenceinjector:PreferenceInjector:1.0'
+provided 'me.denley.preferenceinjector:PreferenceInjector:1.0'
 ```
 
 License
