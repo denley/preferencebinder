@@ -26,13 +26,13 @@ public final class PreferenceInjector {
     /** DO NOT USE: Exposed for generated code. */
     public interface Injector<T> {
         void inject(Context context, T target, SharedPreferences prefs);
-        void stopListening();
+        void stopListening(T target);
     }
 
     static final Map<Class<?>, Injector<Object>> INJECTORS = new LinkedHashMap<Class<?>, Injector<Object>>();
     static final Injector<Object> NOP_INJECTOR = new Injector<Object>() {
         @Override public void inject(Context context, Object target, SharedPreferences prefs) { }
-        @Override public void stopListening() {}
+        @Override public void stopListening(Object target) {}
     };
 
 
@@ -124,7 +124,7 @@ public final class PreferenceInjector {
 
         Injector<Object> injector = INJECTORS.get(targetClass);
         if (injector != null) {
-            injector.stopListening();
+            injector.stopListening(target);
         }
     }
 
