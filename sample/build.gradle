@@ -8,8 +8,8 @@ android {
         applicationId "me.denley.preferenceinjector"
         minSdkVersion 3
         targetSdkVersion 21
-        versionCode 1
-        versionName "1.0"
+        versionCode project.VERSION_CODE
+        versionName project.VERSION_NAME
     }
     buildTypes {
         release {

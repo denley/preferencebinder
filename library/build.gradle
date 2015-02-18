@@ -1,4 +1,5 @@
 apply plugin: 'java'
+apply plugin: 'maven-publish'
 
 sourceCompatibility = 1.7
 targetCompatibility = 1.7
@@ -10,4 +11,32 @@ configurations {
 dependencies {
     provided 'com.google.android:android:1.5_r3'
     compile 'com.google.android:android:1.5_r3'
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            groupId = 'me.denley.preferenceinjector'
+            artifactId = 'PreferenceInjector'
+            version = project.VERSION_NAME
+
+            from components.java
+
+            artifact sourceJar {
+                classifier "sources"
+            }
+        }
+    }
+}
+
+task sourceJar(type: Jar) {
+    from sourceSets.main.allJava
+}
+
+publishing {
+    repositories {
+        maven {
+            url "$buildDir/repo"
+        }
+    }
 }
