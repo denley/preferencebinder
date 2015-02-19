@@ -5,6 +5,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
+import java.lang.annotation.ElementType;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -25,14 +26,12 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
-import javax.lang.model.util.Types;
 import javax.tools.JavaFileObject;
 
 import me.denley.preferenceinjector.InjectPreference;
 import me.denley.preferenceinjector.OnPreferenceChange;
 
 import static javax.lang.model.element.ElementKind.CLASS;
-import static javax.lang.model.element.ElementKind.METHOD;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.STATIC;
 import static javax.tools.Diagnostic.Kind.ERROR;
@@ -46,7 +45,6 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
 
 
     private Elements elementUtils;
-    private Types typeUtils;
     private Filer filer;
 
     private Map<TypeElement, PrefValueInjector> targetClassMap;
@@ -54,9 +52,7 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
 
     @Override public synchronized void init(ProcessingEnvironment env) {
         super.init(env);
-
         elementUtils = env.getElementUtils();
-        typeUtils = env.getTypeUtils();
         filer = env.getFiler();
     }
 
@@ -128,13 +124,32 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
         // Assemble information on the injection point.
         TypeElement enclosingElement = (TypeElement) annotatedElement.getEnclosingElement();
         final InjectPreference annotation = annotatedElement.getAnnotation(InjectPreference.class);
-        boolean autoUpdate = annotation.autoUpdate();
         String preferenceKey = annotation.value();
         String name = annotatedElement.getSimpleName().toString();
-        String type = annotatedElement.asType().toString();
+
+        boolean isField = annotatedElement.getKind().isField();
+        String type;
+
+        if(isField){
+            type = annotatedElement.asType().toString();
+        }else {
+            // Assemble information on the injection point.
+            ExecutableElement executableElement = (ExecutableElement) annotatedElement;
+            List<? extends VariableElement> params = executableElement.getParameters();
+
+            if(params.size() != 1){
+                error(annotatedElement,
+                        "Methods annotated with @InjectPreference must have a single parameter. (%s.%s)",
+                        enclosingElement.getQualifiedName(),
+                        name);
+                return;
+            }
+
+            type = params.get(0).asType().toString();
+        }
 
         PrefValueInjector injector = getOrCreateTargetClass(targetClassMap, enclosingElement);
-        PrefBinding binding = new PrefBinding(name, type, autoUpdate);
+        InitBinding binding = new InitBinding(name, type, isField?ElementType.FIELD:ElementType.METHOD);
         injector.addBinding(preferenceKey, binding);
 
         // Add the type-erased version to the valid injection targets set.
@@ -161,7 +176,7 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
     }
 
     private boolean injectPreferenceAnnotationHasError(Element element){
-        return isInaccessibleViaGeneratedCode(InjectPreference.class, "fields", element)
+        return isInaccessibleViaGeneratedCode(InjectPreference.class, element)
                 || isBindingInWrongPackage(InjectPreference.class, element);
     }
 
@@ -191,32 +206,35 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
             return;
         }
 
-        // This should be guarded by the annotation's @Target but it's worth a check for safe casting.
-        if (!(annotatedElement instanceof ExecutableElement) || annotatedElement.getKind() != METHOD) {
-            throw new IllegalStateException(
-                    String.format("@%s annotation must be on a method.", annotatedElement.getSimpleName()));
-        }
-
         // Assemble information on the injection point.
-        ExecutableElement executableElement = (ExecutableElement) annotatedElement;
         TypeElement enclosingElement = (TypeElement) annotatedElement.getEnclosingElement();
-        OnPreferenceChange annotation = annotatedElement.getAnnotation(OnPreferenceChange.class);
+        final OnPreferenceChange annotation = annotatedElement.getAnnotation(OnPreferenceChange.class);
         String preferenceKey = annotation.value();
-        boolean initialize = annotation.initialize();
         String name = annotatedElement.getSimpleName().toString();
-        List<? extends VariableElement> params = executableElement.getParameters();
 
-        if(params.size() != 1){
-            error(annotatedElement,
-                    "Methods annotated with @OnPreferenceChange must have a single parameter. (%s.%s)",
-                    enclosingElement.getQualifiedName(),
-                    name);
-            return;
+        boolean isField = annotatedElement.getKind().isField();
+        String type;
+
+        if(isField){
+            type = annotatedElement.asType().toString();
+        }else {
+            // Assemble information on the injection point.
+            ExecutableElement executableElement = (ExecutableElement) annotatedElement;
+            List<? extends VariableElement> params = executableElement.getParameters();
+
+            if(params.size() != 1){
+                error(annotatedElement,
+                        "Methods annotated with @OnPreferenceChange must have a single parameter. (%s.%s)",
+                        enclosingElement.getQualifiedName(),
+                        name);
+                return;
+            }
+
+            type = params.get(0).asType().toString();
         }
 
         PrefValueInjector injector = getOrCreateTargetClass(targetClassMap, enclosingElement);
-        String paramType = params.get(0).asType().toString();
-        MethodBinding binding = new MethodBinding(name, paramType, initialize);
+        ListenerBinding binding = new ListenerBinding(name, type, isField?ElementType.FIELD:ElementType.METHOD);
         injector.addBinding(preferenceKey, binding);
 
         // Add the type-erased version to the valid injection targets set.
@@ -224,7 +242,7 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
     }
 
     private boolean onPreferenceChangeAnnotationHasError(Element element){
-        return isInaccessibleViaGeneratedCode(OnPreferenceChange.class, "methods", element)
+        return isInaccessibleViaGeneratedCode(OnPreferenceChange.class, element)
                 || isBindingInWrongPackage(OnPreferenceChange.class, element);
     }
 
@@ -257,32 +275,31 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
         }
     }
 
-    private boolean isInaccessibleViaGeneratedCode(Class<? extends Annotation> annotationClass,
-                                                   String targetThing, Element element) {
+    private boolean isInaccessibleViaGeneratedCode(Class<? extends Annotation> annotationClass, Element element) {
         boolean hasError = false;
         TypeElement enclosingElement = (TypeElement) element.getEnclosingElement();
 
         // Verify method modifiers.
         Set<Modifier> modifiers = element.getModifiers();
         if (modifiers.contains(PRIVATE) || modifiers.contains(STATIC)) {
-            error(element, "@%s %s must not be private or static. (%s.%s)",
-                    annotationClass.getSimpleName(), targetThing, enclosingElement.getQualifiedName(),
+            error(element, "@%s annotated elements must not be private or static. (%s.%s)",
+                    annotationClass.getSimpleName(), enclosingElement.getQualifiedName(),
                     element.getSimpleName());
             hasError = true;
         }
 
         // Verify containing type.
         if (enclosingElement.getKind() != CLASS) {
-            error(enclosingElement, "@%s %s may only be contained in classes. (%s.%s)",
-                    annotationClass.getSimpleName(), targetThing, enclosingElement.getQualifiedName(),
+            error(enclosingElement, "@%s annotated elements may only be contained in classes. (%s.%s)",
+                    annotationClass.getSimpleName(), enclosingElement.getQualifiedName(),
                     element.getSimpleName());
             hasError = true;
         }
 
         // Verify containing class visibility is not private.
         if (enclosingElement.getModifiers().contains(PRIVATE)) {
-            error(enclosingElement, "@%s %s may not be contained in private classes. (%s.%s)",
-                    annotationClass.getSimpleName(), targetThing, enclosingElement.getQualifiedName(),
+            error(enclosingElement, "@%s annotated elements may not be contained in private classes. (%s.%s)",
+                    annotationClass.getSimpleName(), enclosingElement.getQualifiedName(),
                     element.getSimpleName());
             hasError = true;
         }

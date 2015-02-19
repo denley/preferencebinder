@@ -1,17 +1,19 @@
 package me.denley.preferenceinjector.internal;
 
+import java.lang.annotation.ElementType;
+
 /**
  * Created by Denley on 16/02/2015.
  */
-public class MethodBinding implements Binding {
+public class InitBinding implements Binding {
     private final String name;
     private final String type;
-    private final boolean initialize;
+    private final ElementType elementType;
 
-    public MethodBinding(String name, String type, boolean initialize) {
+    public InitBinding(String name, String type, ElementType elementType) {
         this.name = name;
         this.type = type;
-        this.initialize = initialize;
+        this.elementType = elementType;
     }
 
     @Override public String getName(){
@@ -22,12 +24,12 @@ public class MethodBinding implements Binding {
         return type;
     }
 
-    public boolean isInitialize(){
-        return initialize;
+    @Override public ElementType getBindingType(){
+        return elementType;
     }
 
     @Override public String getDescription() {
-        return "method '" + name + "'";
+        return "field '" + name + "'";
     }
 
 }

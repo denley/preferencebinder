@@ -1,17 +1,19 @@
 package me.denley.preferenceinjector.internal;
 
+import java.lang.annotation.ElementType;
+
 /**
  * Created by Denley on 16/02/2015.
  */
-public class PrefBinding implements Binding {
+public class ListenerBinding implements Binding {
     private final String name;
     private final String type;
-    private final boolean autoUpdate;
+    private final ElementType elementType;
 
-    public PrefBinding(String name, String type, boolean autoUpdate) {
+    public ListenerBinding(String name, String type, ElementType elementType) {
         this.name = name;
         this.type = type;
-        this.autoUpdate = autoUpdate;
+        this.elementType = elementType;
     }
 
     @Override public String getName(){
@@ -22,12 +24,12 @@ public class PrefBinding implements Binding {
         return type;
     }
 
-    public boolean isAutoUpdate() {
-        return autoUpdate;
+    @Override public ElementType getBindingType(){
+        return elementType;
     }
 
     @Override public String getDescription() {
-        return "field '" + name + "'";
+        return "method '" + name + "'";
     }
 
 }

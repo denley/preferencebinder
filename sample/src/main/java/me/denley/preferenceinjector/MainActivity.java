@@ -17,7 +17,8 @@ public class MainActivity extends Activity {
     CheckBox booleanPreferenceDisplay;
     SeekBar integerPreferenceDisplay;
 
-    @InjectPreference(value = "boolean_pref_key", autoUpdate = true)
+    @InjectPreference("boolean_pref_key")
+    @OnPreferenceChange("boolean_pref_key")
     boolean booleanPrefValue;
 
     Looper preferenceChangeLooper;
@@ -40,12 +41,14 @@ public class MainActivity extends Activity {
         startHandlerOnBackgroundThread();
     }
 
-    @OnPreferenceChange(value = "integer_pref_key", initialize = true)
+    @InjectPreference("integer_pref_key")
+    @OnPreferenceChange("integer_pref_key")
     void onNewValue(int newValue){
         integerPreferenceDisplay.setProgress(newValue);
     }
 
-    @OnPreferenceChange(value = "integer_pref_key", initialize = true)
+    @InjectPreference("integer_pref_key")
+    @OnPreferenceChange("integer_pref_key")
     void onNewValue2(int newValue){
         booleanPreferenceDisplay.setChecked(booleanPrefValue);
     }
