@@ -9,6 +9,8 @@ import android.preference.PreferenceManager;
 import android.widget.CheckBox;
 import android.widget.SeekBar;
 
+import java.util.Set;
+
 
 public class MainActivity extends Activity {
 
@@ -20,6 +22,12 @@ public class MainActivity extends Activity {
     @InjectPreference("boolean_pref_key")
     @OnPreferenceChange("boolean_pref_key")
     boolean booleanPrefValue;
+
+    @InjectPreference("string_pref_key")
+    String stringPrefValue;
+
+    @InjectPreference("string_set_pref_key")
+    Set<String> stringSetPrefValue;
 
     Looper preferenceChangeLooper;
     Handler handler;
