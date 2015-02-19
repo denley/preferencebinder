@@ -10,11 +10,13 @@ import java.util.Set;
 public class PrefInjection {
     private final String key;
     private final PrefType type;
+    private final String defaultStaticField;
     private final Set<Binding> bindings = new LinkedHashSet<>();
 
-    PrefInjection(String key, PrefType type) {
+    PrefInjection(String key, PrefType type, String defaultField) {
         this.key = key;
         this.type = type;
+        this.defaultStaticField = defaultField;
     }
 
     public String getKey() {
@@ -23,6 +25,10 @@ public class PrefInjection {
 
     public PrefType getType() {
         return type;
+    }
+
+    public String getDefaultStaticField() {
+        return defaultStaticField;
     }
 
     public Collection<Binding> getBindings() {

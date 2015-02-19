@@ -2,6 +2,8 @@
 All notable changes to this project will be documented in this file.
 
 ## Unreleased
+### Added
+- `@PreferenceDefault` annotation, to specify injection values when none exists in the `SharedPreferences` file
 ### Fixed
 - `String` and `Set<String>` are now properly recognized as valid types
 

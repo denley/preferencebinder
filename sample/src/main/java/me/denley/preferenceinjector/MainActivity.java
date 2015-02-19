@@ -15,6 +15,10 @@ import java.util.Set;
 public class MainActivity extends Activity {
 
     private static final long PREFERENCE_CHANGE_INTERVAL_MS = 500;
+    private static final long PREFERENCE_CHANGE_INITIAL_WAIT_MS = 3000;
+
+    @PreferenceDefault("integer_pref_key")
+    static final int INTEGER_PREF_DEFAULT = 50;
 
     CheckBox booleanPreferenceDisplay;
     SeekBar integerPreferenceDisplay;
@@ -55,9 +59,9 @@ public class MainActivity extends Activity {
         integerPreferenceDisplay.setProgress(newValue);
     }
 
-    @InjectPreference("integer_pref_key")
-    @OnPreferenceChange("integer_pref_key")
-    void onNewValue2(int newValue){
+    @InjectPreference("boolean_pref_key")
+    @OnPreferenceChange("boolean_pref_key")
+    void onNewValue2(boolean newValue){
         booleanPreferenceDisplay.setChecked(booleanPrefValue);
     }
 
@@ -74,7 +78,7 @@ public class MainActivity extends Activity {
         Looper.prepare();
         preferenceChangeLooper = Looper.myLooper();
         handler = new Handler(preferenceChangeLooper);
-        handler.postDelayed(externalPreferenceChanger, PREFERENCE_CHANGE_INTERVAL_MS);
+        handler.postDelayed(externalPreferenceChanger, PREFERENCE_CHANGE_INITIAL_WAIT_MS);
     }
 
     private void changePreferenceValues(){

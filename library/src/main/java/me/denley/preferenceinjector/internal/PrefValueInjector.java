@@ -16,16 +16,20 @@ public class PrefValueInjector {
     private static final String INDENT_4 = "                ";
 
     private final Map<String, PrefInjection> prefKeyMap = new LinkedHashMap<>();
+    private final Map<String, String> defaultFieldMap = new LinkedHashMap<>();
+    private final Map<String, String> defaultTypeMap = new LinkedHashMap<>();
     private final String classPackage;
     private final String className;
+    private final String parentClassName;
     private final String targetClass;
     private String parentInjector;
 
     private boolean hasListenerBindings;
 
-    PrefValueInjector(String classPackage, String className, String targetClass) {
+    PrefValueInjector(String classPackage, String className, String parentClassName, String targetClass) {
         this.classPackage = classPackage;
         this.className = className;
+        this.parentClassName = parentClassName;
         this.targetClass = targetClass;
     }
 
@@ -33,20 +37,34 @@ public class PrefValueInjector {
         getOrCreatePrefInjection(key, binding.getType()).addBinding(binding);
     }
 
+    void addDefault(String key, String defaultFieldName, String type) {
+        if(defaultFieldMap.containsKey(key)){
+            throw new IllegalArgumentException("Default value set more than once for \""+key+"\" in "+getFqcn());
+        }
+
+        defaultFieldMap.put(key, defaultFieldName);
+        defaultTypeMap.put(key, type);
+    }
+
     void setParentInjector(String parentInjector) {
         this.parentInjector = parentInjector;
     }
 
     private PrefInjection getOrCreatePrefInjection(String key, String typeDef) {
+        final String defaultTypeDef = defaultTypeMap.get(key);
+        if(defaultTypeDef!=null && !defaultTypeDef.equals(typeDef)){
+            throw new IllegalArgumentException("Default value type ("+defaultTypeDef
+                    +") does not match injection type ("+typeDef+") for \"" + key+"\"");
+        }
+
         PrefInjection viewId = prefKeyMap.get(key);
         if (viewId == null) {
-            viewId = new PrefInjection(key, getType(key, typeDef));
+            viewId = new PrefInjection(key, getType(key, typeDef), defaultFieldMap.get(key));
             prefKeyMap.put(key, viewId);
-        }else {
-            if(!viewId.getType().getFieldTypeDef().equals(typeDef)){
-                throw new IllegalArgumentException("Inconsistent type definitions for key "+key);
-            }
+        }else if(!viewId.getType().getFieldTypeDef().equals(typeDef)) {
+            throw new IllegalArgumentException("Inconsistent type definitions for key " + key);
         }
+
         return viewId;
     }
 
@@ -161,7 +179,18 @@ public class PrefValueInjector {
                 .append("\")) {\n");
         emitInitialValueLoad(builder, injection);
         emitInitializationSetters(builder, injection.getKey(), initializationBindings);
-        builder.append(INDENT_2).append("}\n\n");
+        builder.append(INDENT_2).append("}");
+        emitDefaultInitialization(builder, injection, initializationBindings);
+        builder.append("\n\n");
+    }
+
+    private void emitDefaultInitialization(StringBuilder builder, PrefInjection injection, Collection<InitBinding> initializationBindings){
+        final String defaultFieldName = injection.getDefaultStaticField();
+        if(defaultFieldName!=null) {
+            builder.append(" else {\n");
+            emitInitializationSetters(builder, parentClassName + "." + defaultFieldName, initializationBindings);
+            builder.append(INDENT_2).append("}");
+        }
     }
 
     private Collection<InitBinding> collectInitializationBindings(PrefInjection injection){
@@ -174,18 +203,18 @@ public class PrefValueInjector {
         return initializationBindings;
     }
 
-    private void emitInitializationSetters(StringBuilder builder, String key, Collection<InitBinding> initializationBindings) {
+    private void emitInitializationSetters(StringBuilder builder, String assignment, Collection<InitBinding> initializationBindings) {
         for (InitBinding binding : initializationBindings) {
-            emitInitializationSetter(builder, key, binding);
+            emitInitializationSetter(builder, assignment, binding);
         }
     }
 
-    private void emitInitializationSetter(StringBuilder builder, String key, InitBinding binding){
+    private void emitInitializationSetter(StringBuilder builder, String assignment, InitBinding binding){
         builder.append(INDENT_3);
         if(binding.getBindingType()== ElementType.METHOD) {
-            emitMethodCall(builder, key, binding);
+            emitMethodCall(builder, assignment, binding);
         } else {
-            emitFieldUpdate(builder,key,  binding);
+            emitFieldUpdate(builder,assignment,  binding);
         }
     }
 
@@ -297,21 +326,32 @@ public class PrefValueInjector {
                 .append(");\n");
 
         emitListenerBindings(builder, injection.getKey(), bindings);
-        builder.append(INDENT_3).append("}\n");
+        builder.append(INDENT_3).append("}");
+        emitListenerDefaultAssignment(builder, injection, bindings);
+        builder.append("\n");
     }
 
-    private void emitListenerBindings(StringBuilder builder, String key, Collection<ListenerBinding> bindings) {
-        for (ListenerBinding binding : bindings) {
-            emitListenerBinding(builder, key, binding);
+    private void emitListenerDefaultAssignment(StringBuilder builder, PrefInjection injection, Collection<ListenerBinding> bindings){
+        final String defaultFieldName = injection.getDefaultStaticField();
+        if(defaultFieldName!=null) {
+            builder.append(" else {\n");
+            emitListenerBindings(builder, parentClassName+"."+defaultFieldName, bindings);
+            builder.append(INDENT_3).append("}");
         }
     }
 
-    private void emitListenerBinding(StringBuilder builder, String key, ListenerBinding binding) {
+    private void emitListenerBindings(StringBuilder builder, String assignment, Collection<ListenerBinding> bindings) {
+        for (ListenerBinding binding : bindings) {
+            emitListenerBinding(builder, assignment, binding);
+        }
+    }
+
+    private void emitListenerBinding(StringBuilder builder, String assignment, ListenerBinding binding) {
         builder.append(INDENT_4);
         if(binding.getBindingType() == ElementType.FIELD) {
-            emitFieldUpdate(builder, key, binding);
+            emitFieldUpdate(builder, assignment, binding);
         } else {
-            emitMethodCall(builder, key, binding);
+            emitMethodCall(builder, assignment, binding);
         }
     }
 
@@ -325,19 +365,19 @@ public class PrefValueInjector {
         return listenerBindings;
     }
 
-    private void emitFieldUpdate(StringBuilder builder, String key, Binding binding){
+    private void emitFieldUpdate(StringBuilder builder, String assignment, Binding binding){
         builder.append("target.")
                 .append(binding.getName())
                 .append(" = ")
-                .append(key)
+                .append(assignment)
                 .append(";\n");
     }
 
-    private void emitMethodCall(StringBuilder builder, String key, Binding binding){
+    private void emitMethodCall(StringBuilder builder, String assignment, Binding binding){
         builder.append("target.")
                 .append(binding.getName())
                 .append("(")
-                .append(key)
+                .append(assignment)
                 .append(");\n");
     }
 

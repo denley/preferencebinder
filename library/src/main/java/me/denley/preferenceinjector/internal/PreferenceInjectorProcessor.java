@@ -30,6 +30,7 @@ import javax.tools.JavaFileObject;
 
 import me.denley.preferenceinjector.InjectPreference;
 import me.denley.preferenceinjector.OnPreferenceChange;
+import me.denley.preferenceinjector.PreferenceDefault;
 
 import static javax.lang.model.element.ElementKind.CLASS;
 import static javax.lang.model.element.Modifier.PRIVATE;
@@ -60,6 +61,7 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
         Set<String> supportTypes = new LinkedHashSet<String>();
         supportTypes.add(InjectPreference.class.getCanonicalName());
         supportTypes.add(OnPreferenceChange.class.getCanonicalName());
+        supportTypes.add(PreferenceDefault.class.getCanonicalName());
         return supportTypes;
     }
 
@@ -88,10 +90,61 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
     }
 
     private Map<TypeElement, PrefValueInjector> findAndParseAnnotations(RoundEnvironment env) {
+        findAndParseDefaultFieldNames(env);
         findAndParseInjectPreferenceAnnotations(env);
         findAndParseOnPreferenceChangeAnnotations(env);
         findAndSetParentInjectors();
         return targetClassMap;
+    }
+
+    private void findAndParseDefaultFieldNames(RoundEnvironment env) {
+        Set<? extends Element> defaultFieldNameAnnotations = env.getElementsAnnotatedWith(PreferenceDefault.class);
+        parseDefaultFieldsNames(defaultFieldNameAnnotations);
+    }
+
+    private void parseDefaultFieldsNames(Set<? extends Element> defaultFieldNameAnnotations){
+        for (Element element : defaultFieldNameAnnotations) {
+            parseDefaultFieldNameOrFail(element);
+        }
+    }
+
+    private void parseDefaultFieldNameOrFail(Element annotatedElement) {
+        try {
+            parseDefaultFieldName(annotatedElement);
+        } catch (Exception e) {
+            StringWriter stackTrace = new StringWriter();
+            e.printStackTrace(new PrintWriter(stackTrace));
+
+            error(annotatedElement, "Unable to load default preference value from @PreferenceDefault.\n\n%s", stackTrace);
+        }
+    }
+
+    private void parseDefaultFieldName(Element annotatedElement) {
+        if (isAccessibleAndStatic(InjectPreference.class, annotatedElement)) {
+            return;
+        }
+
+        // Assemble information on the injection point.
+        TypeElement enclosingElement = (TypeElement) annotatedElement.getEnclosingElement();
+        final PreferenceDefault annotation = annotatedElement.getAnnotation(PreferenceDefault.class);
+        String preferenceKey = annotation.value();
+        String name = annotatedElement.getSimpleName().toString();
+        String type = annotatedElement.asType().toString();
+
+        // Check that the target is a field
+        if(!annotatedElement.getKind().isField()){
+            error(annotatedElement,
+                    "Only fields can be annotate with @PreferenceDefault (%s.%s)",
+                    enclosingElement.getQualifiedName(),
+                    name);
+            return;
+        }
+
+        PrefValueInjector injector = getOrCreateTargetClass(targetClassMap, enclosingElement);
+        injector.addDefault(preferenceKey, name, type);
+
+        // Add the type-erased version to the valid injection targets set.
+        erasedTargetNames.add(enclosingElement.toString());
     }
 
     private void findAndParseInjectPreferenceAnnotations(RoundEnvironment env){
@@ -162,9 +215,10 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
         if (injector == null) {
             String targetType = enclosingElement.getQualifiedName().toString();
             String classPackage = getPackageName(enclosingElement);
-            String className = getClassName(enclosingElement, classPackage) + SUFFIX;
+            String parentClassName = getClassName(enclosingElement, classPackage);
+            String className = parentClassName + SUFFIX;
 
-            injector = new PrefValueInjector(classPackage, className, targetType);
+            injector = new PrefValueInjector(classPackage, className, parentClassName, targetType);
             targetClassMap.put(enclosingElement, injector);
         }
         return injector;
@@ -273,6 +327,38 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
                 return packageName + "." + getClassName(typeElement, packageName);
             }
         }
+    }
+
+    private boolean isAccessibleAndStatic(Class<? extends Annotation> annotationClass, Element element){
+        boolean hasError = false;
+        TypeElement enclosingElement = (TypeElement) element.getEnclosingElement();
+
+        // Verify method modifiers.
+        Set<Modifier> modifiers = element.getModifiers();
+        if (modifiers.contains(PRIVATE)) {
+            error(element, "@%s annotated elements must not be private. (%s.%s)",
+                    annotationClass.getSimpleName(), enclosingElement.getQualifiedName(),
+                    element.getSimpleName());
+            hasError = true;
+        }
+
+        // Verify containing type.
+        if (enclosingElement.getKind() != CLASS) {
+            error(enclosingElement, "@%s annotated elements may only be contained in classes. (%s.%s)",
+                    annotationClass.getSimpleName(), enclosingElement.getQualifiedName(),
+                    element.getSimpleName());
+            hasError = true;
+        }
+
+        // Verify containing class visibility is not private.
+        if (enclosingElement.getModifiers().contains(PRIVATE)) {
+            error(enclosingElement, "@%s annotated elements may not be contained in private classes. (%s.%s)",
+                    annotationClass.getSimpleName(), enclosingElement.getQualifiedName(),
+                    element.getSimpleName());
+            hasError = true;
+        }
+
+        return hasError;
     }
 
     private boolean isInaccessibleViaGeneratedCode(Class<? extends Annotation> annotationClass, Element element) {
