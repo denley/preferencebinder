@@ -68,13 +68,27 @@ Be sure to cancel your listeners when you no longer want updates (e.g. in your `
 PreferenceInjector.stopListening(this);
 ```
 
+#### Default Values
+To specify default values for preference keys, use the `@PreferenceDefault` annotation on static field containing the default value, like so:
+```
+@PreferenceDefault("my_preference_key")
+static String MY_PREFERENCE_DEFAULT = "Unknown";
+
+@InjectPreference("my_preference_key")
+void updateForValue(String valueOfPreference) {
+    // do something with the value
+    ...
+}
+```
+
+In the above example, the injector will call `updateForValue(MY_PREFERENCE_DEFAULT)` if no value is set for `"my_preference_key"` at injection time. For fields and methods annotated with `@OnPreferenceChange`, the default value will be passed whenever the value for the given key is removed.
 
 Build Configuration
 --------
 
 Add the following line to the gradle dependencies for your module.
 ```
-compile 'me.denley.preferenceinjector:PreferenceInjector:2.0.0'
+compile 'me.denley.preferenceinjector:PreferenceInjector:2.1.0'
 ```
 
 License

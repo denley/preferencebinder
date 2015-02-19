@@ -1,7 +1,7 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.1.0 - 2015-02-19
 ### Added
 - `@PreferenceDefault` annotation, to specify injection values when none exists in the `SharedPreferences` file
 ### Fixed
