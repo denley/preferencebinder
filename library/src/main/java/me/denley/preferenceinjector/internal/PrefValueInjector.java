@@ -14,14 +14,14 @@ public class PrefValueInjector {
     private static final String INDENT_2 = "        ";
     private static final String INDENT_3 = "            ";
     private static final String INDENT_4 = "                ";
-    private static final String INDENT_5 = "                    ";
-    private static final String INDENT_6 = "                        ";
 
     private final Map<String, PrefInjection> prefKeyMap = new LinkedHashMap<>();
     private final String classPackage;
     private final String className;
     private final String targetClass;
     private String parentInjector;
+
+    private boolean hasListenerBindings;
 
     PrefValueInjector(String classPackage, String className, String targetClass) {
         this.classPackage = classPackage;
@@ -55,6 +55,8 @@ public class PrefValueInjector {
     }
 
     String brewJava() {
+        hasListenerBindings = hasListenerBindings();
+
         StringBuilder builder = new StringBuilder();
 
         builder.append("// Generated code from Preference Injector. Do not modify!\n");
@@ -69,6 +71,16 @@ public class PrefValueInjector {
         builder.append("}\n");
 
         return builder.toString();
+    }
+
+    private boolean hasListenerBindings(){
+        for (PrefInjection injection : prefKeyMap.values()) {
+            if(!collectListenerBindings(injection).isEmpty()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void emitImports(StringBuilder builder){
@@ -96,8 +108,11 @@ public class PrefValueInjector {
     }
 
     private void emitMemberVariables(StringBuilder builder) {
-        builder.append(INDENT).append("private HashMap<T, SharedPreferences> prefsMap = new HashMap<T, SharedPreferences>();\n");
-        builder.append(INDENT).append("private HashMap<T, OnSharedPreferenceChangeListener> listenerMap = new HashMap<T, OnSharedPreferenceChangeListener>();\n\n");
+        if(hasListenerBindings) {
+            builder.append(INDENT).append("private HashMap<T, SharedPreferences> prefsMap = new HashMap<T, SharedPreferences>();\n");
+            builder.append(INDENT).append("private HashMap<T, OnSharedPreferenceChangeListener> listenerMap = new HashMap<T, OnSharedPreferenceChangeListener>();\n");
+        }
+        builder.append("\n");
     }
 
     private void emitInjectMethod(StringBuilder builder){
@@ -111,13 +126,16 @@ public class PrefValueInjector {
         }
 
         // Loop over each initialization and emit it.
-        builder.append(INDENT_2).append("initializeTarget(target, prefs);\n\n");
+        builder.append(INDENT_2).append("initializeTarget(target, prefs);\n");
 
-        emitListener(builder);
+        if(hasListenerBindings) {
+            builder.append("\n");
+            emitListener(builder);
+            builder.append(INDENT_2).append("prefsMap.put(target, prefs);\n");
+            builder.append(INDENT_2).append("listenerMap.put(target, listener);\n");
+            builder.append(INDENT_2).append("prefs.registerOnSharedPreferenceChangeListener(listener);\n");
+        }
 
-        builder.append(INDENT_2).append("prefsMap.put(target, prefs);\n");
-        builder.append(INDENT_2).append("listenerMap.put(target, listener);\n");
-        builder.append(INDENT_2).append("prefs.registerOnSharedPreferenceChangeListener(listener);\n");
         builder.append(INDENT).append("}\n\n");
     }
 
@@ -199,12 +217,14 @@ public class PrefValueInjector {
     }
 
     private void emitListenerMethod(StringBuilder builder) {
-        builder.append(INDENT)
-                .append("private void updateTarget(T target, SharedPreferences prefs, String key) {\n");
-        emitListenerInjections(builder);
-        builder.append("\n")
-                .append(INDENT)
-                .append("};\n\n");
+        if(hasListenerBindings) {
+            builder.append(INDENT)
+                    .append("private void updateTarget(T target, SharedPreferences prefs, String key) {\n");
+            emitListenerInjections(builder);
+            builder.append("\n")
+                    .append(INDENT)
+                    .append("};\n\n");
+        }
     }
 
     private void emitListenerInjections(StringBuilder builder){
@@ -234,17 +254,20 @@ public class PrefValueInjector {
             builder.append(INDENT_2).append("super.stopListening(target);\n\n");
         }
 
-        builder.append(INDENT_2)
-                .append("SharedPreferences prefs = prefsMap.remove(target);\n")
-                .append(INDENT_2)
-                .append("OnSharedPreferenceChangeListener listener = listenerMap.remove(target);\n")
-                .append(INDENT_2)
-                .append("if (prefs!=null && listener!=null) {\n")
-                .append(INDENT_3)
-                .append("prefs.unregisterOnSharedPreferenceChangeListener(listener);\n")
-                .append(INDENT_2)
-                .append("}\n")
-                .append(INDENT).append("}\n\n");
+        if(hasListenerBindings) {
+            builder.append(INDENT_2)
+                    .append("SharedPreferences prefs = prefsMap.remove(target);\n")
+                    .append(INDENT_2)
+                    .append("OnSharedPreferenceChangeListener listener = listenerMap.remove(target);\n")
+                    .append(INDENT_2)
+                    .append("if (prefs!=null && listener!=null) {\n")
+                    .append(INDENT_3)
+                    .append("prefs.unregisterOnSharedPreferenceChangeListener(listener);\n")
+                    .append(INDENT_2)
+                    .append("}\n");
+        }
+
+        builder.append(INDENT).append("}\n\n");
     }
 
     private void emitListenerInjectionIfBlock(StringBuilder builder, PrefInjection injection, Collection<ListenerBinding> bindings){

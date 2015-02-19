@@ -29,7 +29,7 @@ Then call the following method from anywhere in your target class, to inject the
 PreferenceInjector.init(this);
 ```
 
-Be sure to cancel your listeners when you no longer want updates (e.g. in your `Activity`'s `onDestroy` method):
+Be sure to cancel your listeners when you no longer want updates (e.g. in your `Activity`'s `onDestroy` method). You only need to do this if you have any `@OnPreferenceChange` annotations.
 ```
 PreferenceInjector.stopListening(this);
 ```
