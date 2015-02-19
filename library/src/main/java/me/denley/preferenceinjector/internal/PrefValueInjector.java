@@ -33,10 +33,6 @@ public class PrefValueInjector {
         getOrCreatePrefInjection(key, binding.getType()).addBinding(binding);
     }
 
-    PrefInjection getPrefInjection(String key) {
-        return prefKeyMap.get(key);
-    }
-
     void setParentInjector(String parentInjector) {
         this.parentInjector = parentInjector;
     }
@@ -100,8 +96,8 @@ public class PrefValueInjector {
     }
 
     private void emitMemberVariables(StringBuilder builder) {
-        builder.append(INDENT).append("HashMap<T, SharedPreferences> prefsMap = new HashMap<T, SharedPreferences>();\n");
-        builder.append(INDENT).append("HashMap<T, OnSharedPreferenceChangeListener> listenerMap = new HashMap<T, OnSharedPreferenceChangeListener>();\n\n");
+        builder.append(INDENT).append("private HashMap<T, SharedPreferences> prefsMap = new HashMap<T, SharedPreferences>();\n");
+        builder.append(INDENT).append("private HashMap<T, OnSharedPreferenceChangeListener> listenerMap = new HashMap<T, OnSharedPreferenceChangeListener>();\n\n");
     }
 
     private void emitInjectMethod(StringBuilder builder){
@@ -231,13 +227,23 @@ public class PrefValueInjector {
 
     private void emitStopListeningMethod(StringBuilder builder){
         builder.append(INDENT)
-                .append("@Override public void stopListening(T target) {\n")
-                .append(INDENT_2)
+                .append("@Override public void stopListening(T target) {\n");
+
+        // Emit a call to the superclass, if any.
+        if (parentInjector != null) {
+            builder.append(INDENT_2).append("super.stopListening(target);\n\n");
+        }
+
+        builder.append(INDENT_2)
                 .append("SharedPreferences prefs = prefsMap.remove(target);\n")
                 .append(INDENT_2)
                 .append("OnSharedPreferenceChangeListener listener = listenerMap.remove(target);\n")
                 .append(INDENT_2)
+                .append("if (prefs!=null && listener!=null) {\n")
+                .append(INDENT_3)
                 .append("prefs.unregisterOnSharedPreferenceChangeListener(listener);\n")
+                .append(INDENT_2)
+                .append("}\n")
                 .append(INDENT).append("}\n\n");
     }
 
