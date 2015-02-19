@@ -5,15 +5,36 @@ A SharedPreferences injection library for Android. Using annotation processing, 
 How to Use
 -------
 
-Use the `@InjectPreference` annotation on a field in any class of your app. The preference value for the specified key will be loaded into the field (be sure to match the types properly, this is not checked at compile time).
+#### Injecting Preference Values
+Use the `@InjectPreference` annotation to retrieve and inject preference values.
 
+It can be used on any field, like so:
 ```
 @InjectPreference("my_preference_key")
 String valueOfPreference;
 ```
 
-Use the `@OnPreferenceChange` annotation on a method in any class of your app. The method will be called whenever the preference value changes for the specified key, providing the new value associated with the key as the method parameter (be sure to match the types properly, this is not checked at compile time).
+or on any method, like so:
+```
+@InjectPreference("my_preference_key")
+void initializeForPreferenceValue(String valueOfPreference) {
+    // do something with the value
+    ...
+}
+```
 
+Be sure to match the field types and method parameter types with the type of value stored for the preference key. This is not checked at compile time, and may cause runtime exceptions.
+
+#### Listening for Changes
+Use the `@OnPreferenceChange` annotation to listen for changes to preference values.
+
+It can be used on any field, like so:
+```
+@OnPreferenceChange("my_preference_key")
+String valueOfPreference;
+```
+
+or on any method, like so:
 ```
 @OnPreferenceChange("my_preference_key")
 void valueChanged(String valueOfPreference) {
@@ -22,8 +43,21 @@ void valueChanged(String valueOfPreference) {
 }
 ```
 
-<br/>
-Then call the following method from anywhere in your target class, to inject the preferences and begin listening for changes (a likely place for this is in an `Activity`'s `onCreate` method):
+Typically, you might use `@InjectPreference` and `OnPreferenceChange` together, like so:
+```
+@InjectPreference("my_preference_key")
+@OnPreferenceChange("my_preference_key")
+void updateForValue(String valueOfPreference) {
+    // do something with the value
+    ...
+}
+```
+
+
+Be sure to match the field types and method parameter types with the type of value stored for the preference key. This can't be checked at compile time, and may cause runtime exceptions if a different type of value is stored into the `SharedPreferences` file.
+
+#### Triggering Injection and Listeners
+To trigger injection, and start listening for changes to preference values, you must call the following method in your target class (a typical place for this is in an `Activity`'s `onCreate` method):
 ```
 // In certain class types, you may have to add a Context argument too
 PreferenceInjector.init(this);
@@ -34,24 +68,13 @@ Be sure to cancel your listeners when you no longer want updates (e.g. in your `
 PreferenceInjector.stopListening(this);
 ```
 
-<br/>
-You can also specify for fields to be updated automatically when the preference value changes:
-```
-@InjectPreference(value = "my_preference_key", autoUpdate = true)
-```
 
-Similarly, you can specify that methods should be called with the initial value of the preference:
-```
-@OnPreferenceChange(value = "my_preference_key", initialize = true)
-```
-
-
-How to Include in Your Project
+Build Configuration
 --------
 
 Add the following line to the gradle dependencies for your module.
 ```
-compile 'me.denley.preferenceinjector:PreferenceInjector:1.0'
+compile 'me.denley.preferenceinjector:PreferenceInjector:2.0.0'
 ```
 
 License
