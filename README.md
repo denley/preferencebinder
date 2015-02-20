@@ -60,7 +60,7 @@ Be sure to match the field types and method parameter types with the type of val
 To trigger injection, and start listening for changes to preference values, you must call the following method in your target class (a typical place for this is in an `Activity`'s `onCreate` method):
 ```
 // In certain class types, you may have to add a Context argument too
-PreferenceInjector.init(this);
+PreferenceInjector.inject(this);
 ```
 
 Be sure to cancel your listeners when you no longer want updates (e.g. in your `Activity`'s `onDestroy` method). You only need to do this if you have any `@OnPreferenceChange` annotations.
