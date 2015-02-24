@@ -19,8 +19,8 @@ allprojects {
 }
 
 ext {
-    VERSION_NAME = '2.1.0'
-    VERSION_CODE = 3
+    VERSION_NAME = '2.1.1'
+    VERSION_CODE = 4
     GROUP_ID = "me.denley.preferenceinjector"
     ARTFACT_ID = 'PreferenceInjector'
 }

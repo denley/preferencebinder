@@ -99,7 +99,7 @@ Build Configuration
 
 Add the following line to the gradle dependencies for your module.
 ```
-compile 'me.denley.preferenceinjector:PreferenceInjector:2.1.0'
+compile 'me.denley.preferenceinjector:PreferenceInjector:2.1.1'
 ```
 
 License
