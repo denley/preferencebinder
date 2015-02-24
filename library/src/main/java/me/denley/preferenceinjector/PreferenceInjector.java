@@ -1,10 +1,13 @@
 package me.denley.preferenceinjector;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.Fragment;
+import android.app.Service;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.preference.PreferenceManager;
 import android.view.View;
 
@@ -44,6 +47,15 @@ public final class PreferenceInjector {
     }
 
     /**
+     * Inject annotated fields and methods in the specified {@link Service}.
+     *
+     * @param target Target Service for field injection.
+     */
+    public static void inject(Service target) {
+        inject(target, target);
+    }
+
+    /**
      * Inject annotated fields and methods in the specified {@link View}.
      *
      * @param target Target view for field injection.
@@ -66,6 +78,7 @@ public final class PreferenceInjector {
      *
      * @param target Target fragment for field injection.
      */
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     public static void inject(Fragment target) {
         final Context context = target.getActivity();
 
@@ -97,6 +110,16 @@ public final class PreferenceInjector {
     }
 
     /**
+     * Inject annotated fields and methods in the specified {@link Service}.
+     *
+     * @param target Target Service for field injection.
+     * @param prefsFileName The name of the {@link android.content.SharedPreferences} file to use.
+     */
+    public static void inject(Service target, String prefsFileName) {
+        inject(target, target);
+    }
+
+    /**
      * Inject annotated fields and methods in the specified {@link Activity}.
      *
      * @param target Target for field injection.
@@ -122,6 +145,7 @@ public final class PreferenceInjector {
      * @param target Target for field injection.
      * @param prefsFileName The name of the {@link android.content.SharedPreferences} file to use.
      */
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     public static void inject(Fragment target, String prefsFileName) {
         final Context context = target.getActivity();
 

@@ -59,12 +59,12 @@ void updateForValue(String valueOfPreference) {
 Be sure to match the field types and method parameter types with the type of value stored for the preference key. This can't be checked at compile time, and may cause runtime exceptions if a different type of value is stored into the `SharedPreferences` file.
 
 #### Triggering Injection and Listeners
-To trigger injection, and start listening for changes to preference values, you must call the following method in your target `Activity`, `Fragment`, `View` or `Dialog` (a typical place for this is in an `onCreate`, `onCreateView` or `onFinishInflate` method):
+To trigger injection, and start listening for changes to preference values, you must call the following method in your target (a typical place for this is in an `onCreate`, `onCreateView` or `onFinishInflate` method):
 ```
 PreferenceInjector.inject(this);
 ```
 
-If your target class in not one of these types, then you must also provide a `Context` with the target, like so:
+The method above works if your target is a subclass of `Activity`, `Fragment`, `View`, `Service` or `Dialog`. If your target is not one of these types, then you must also provide a `Context` too, like so:
 ```
 PreferenceInjector.inject(context, this);
 ```

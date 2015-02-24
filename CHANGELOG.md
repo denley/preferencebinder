@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 ### Added
 - `PreferenceInjector.inject(Fragment target)` method. The `Context` can be inferred from the `Fragment`.
+- `PreferenceInjector.inject(Service target)` method. The `Context` can be inferred from the `Service`.
 
 ## 2.1.0 - 2015-02-19
 ### Added
