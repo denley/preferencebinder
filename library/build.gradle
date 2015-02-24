@@ -1,42 +1,23 @@
-apply plugin: 'java'
-apply plugin: 'maven-publish'
+apply plugin: 'com.android.library'
 
-sourceCompatibility = 1.7
-targetCompatibility = 1.7
+android {
+    compileSdkVersion 21
+    buildToolsVersion "20.0.0"
 
-configurations {
-    provided
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    lintOptions {
+        abortOnError false
+    }
 }
 
 dependencies {
-    provided 'com.google.android:android:1.5_r3'
-    compile 'com.google.android:android:1.5_r3'
+
 }
 
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            groupId = 'me.denley.preferenceinjector'
-            artifactId = 'PreferenceInjector'
-            version = project.VERSION_NAME
-
-            from components.java
-
-            artifact sourceJar {
-                classifier "sources"
-            }
-        }
-    }
-}
-
-task sourceJar(type: Jar) {
-    from sourceSets.main.allJava
-}
-
-publishing {
-    repositories {
-        maven {
-            url "$buildDir/repo"
-        }
-    }
-}
+apply from: 'android-release-aar.gradle'

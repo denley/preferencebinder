@@ -1,4 +1,4 @@
-package me.denley.preferenceinjector;
+package me.denley.preferenceinjector.sample;
 
 import android.app.Activity;
 import android.content.SharedPreferences;
@@ -10,6 +10,12 @@ import android.widget.CheckBox;
 import android.widget.SeekBar;
 
 import java.util.Set;
+
+import me.denley.preferenceinjector.InjectPreference;
+import me.denley.preferenceinjector.OnPreferenceChange;
+import me.denley.preferenceinjector.PreferenceDefault;
+import me.denley.preferenceinjector.PreferenceInjector;
+import me.denley.preferenceinjector.R;
 
 
 public class MainActivity extends Activity {
