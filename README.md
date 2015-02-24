@@ -59,15 +59,24 @@ void updateForValue(String valueOfPreference) {
 Be sure to match the field types and method parameter types with the type of value stored for the preference key. This can't be checked at compile time, and may cause runtime exceptions if a different type of value is stored into the `SharedPreferences` file.
 
 #### Triggering Injection and Listeners
-To trigger injection, and start listening for changes to preference values, you must call the following method in your target class (a typical place for this is in an `Activity`'s `onCreate` method):
+To trigger injection, and start listening for changes to preference values, you must call the following method in your target `Activity`, `Fragment`, `View` or `Dialog` (a typical place for this is in an `onCreate`, `onCreateView` or `onFinishInflate` method):
 ```
-// In certain class types, you may have to add a Context argument too
 PreferenceInjector.inject(this);
+```
+
+If your target class in not one of these types, then you must also provide a `Context` with the target, like so:
+```
+PreferenceInjector.inject(context, this);
 ```
 
 Be sure to cancel your listeners when you no longer want updates (e.g. in your `Activity`'s `onDestroy` method). You only need to do this if you have any `@OnPreferenceChange` annotations.
 ```
 PreferenceInjector.stopListening(this);
+```
+
+To use a non-default `SharedPreferences` file, you can specify the name of the file when injecting, like so:
+```
+PreferenceInjector.inject(this, "prefs_file_name");
 ```
 
 #### Default Values
