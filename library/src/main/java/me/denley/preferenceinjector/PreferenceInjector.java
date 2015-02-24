@@ -2,6 +2,7 @@ package me.denley.preferenceinjector;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.app.Fragment;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
@@ -11,9 +12,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import me.denley.preferenceinjector.internal.PreferenceInjectorProcessor;
-
-import static me.denley.preferenceinjector.internal.PreferenceInjectorProcessor.ANDROID_PREFIX;
-import static me.denley.preferenceinjector.internal.PreferenceInjectorProcessor.JAVA_PREFIX;
 
 /**
  * Created by Denley on 15/02/2015.
@@ -64,6 +62,21 @@ public final class PreferenceInjector {
     }
 
     /**
+     * Inject annotated fields and methods in the specified {@link Fragment}.
+     *
+     * @param target Target fragment for field injection.
+     */
+    public static void inject(Fragment target) {
+        final Context context = target.getActivity();
+
+        if(context==null) {
+            throw new IllegalStateException("Fragment must be attached to an Activity before injecting");
+        }
+
+        inject(context, target);
+    }
+
+    /**
      * Inject annotated fields and methods in the specified {@link Object}.
      *
      * @param context The Context to use to load {@link SharedPreferences} values.
@@ -101,6 +114,22 @@ public final class PreferenceInjector {
      */
     public static void inject(Dialog target, String prefsFileName) {
         inject(target.getContext(), target, prefsFileName);
+    }
+
+    /**
+     * Inject annotated fields and methods in the specified {@link Fragment}.
+     *
+     * @param target Target for field injection.
+     * @param prefsFileName The name of the {@link android.content.SharedPreferences} file to use.
+     */
+    public static void inject(Fragment target, String prefsFileName) {
+        final Context context = target.getActivity();
+
+        if(context==null) {
+            throw new IllegalStateException("Fragment must be attached to an Activity before injecting");
+        }
+
+        inject(context, target, prefsFileName);
     }
 
     /**
@@ -149,7 +178,7 @@ public final class PreferenceInjector {
             return injector;
         }
         String clsName = cls.getName();
-        if (clsName.startsWith(ANDROID_PREFIX) || clsName.startsWith(JAVA_PREFIX)) {
+        if (clsName.startsWith(PreferenceInjectorProcessor.ANDROID_PREFIX) || clsName.startsWith(PreferenceInjectorProcessor.JAVA_PREFIX)) {
             return NOP_INJECTOR;
         }
         try {
