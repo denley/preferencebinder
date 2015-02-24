@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "me.denley.preferenceinjector"
-        minSdkVersion 3
+        minSdkVersion 11
         targetSdkVersion 21
         versionCode project.VERSION_CODE
         versionName project.VERSION_NAME
