@@ -11,13 +11,13 @@ How to Use
 Use the `@InjectPreference` annotation to retrieve and inject preference values.
 
 It can be used on any field, like so:
-```
+```java
 @InjectPreference("my_preference_key")
 String valueOfPreference;
 ```
 
 or on any method, like so:
-```
+```java
 @InjectPreference("my_preference_key")
 void initializeForPreferenceValue(String valueOfPreference) {
     // do something with the value
@@ -31,13 +31,13 @@ Be sure to match the field types and method parameter types with the type of val
 Use the `@OnPreferenceChange` annotation to listen for changes to preference values.
 
 It can be used on any field, like so:
-```
+```java
 @OnPreferenceChange("my_preference_key")
 String valueOfPreference;
 ```
 
 or on any method, like so:
-```
+```java
 @OnPreferenceChange("my_preference_key")
 void valueChanged(String valueOfPreference) {
     // do something with the value
@@ -46,7 +46,7 @@ void valueChanged(String valueOfPreference) {
 ```
 
 Typically, you might use `@InjectPreference` and `OnPreferenceChange` together, like so:
-```
+```java
 @InjectPreference("my_preference_key")
 @OnPreferenceChange("my_preference_key")
 void updateForValue(String valueOfPreference) {
@@ -60,35 +60,35 @@ Be sure to match the field types and method parameter types with the type of val
 
 #### Triggering Injection and Listeners
 To trigger injection, and start listening for changes to preference values, you must call the following method in your target (a typical place for this is in an `onCreate`, `onCreateView` or `onFinishInflate` method):
-```
+```java
 PreferenceInjector.inject(this);
 ```
 
 The method above works if your target is a subclass of `Activity`, `Fragment`, `View`, `Service` or `Dialog`. If your target is not one of these types, then you must also provide a `Context` too, like so:
-```
+```java
 PreferenceInjector.inject(context, this);
 ```
 
 Be sure to cancel your listeners when you no longer want updates (e.g. in your `Activity`'s `onDestroy` method). You only need to do this if you have any `@OnPreferenceChange` annotations.
-```
+```java
 PreferenceInjector.stopListening(this);
 ```
 
 To use a non-default `SharedPreferences` file, you can specify the name of the file when injecting, like so:
-```
+```java
 PreferenceInjector.inject(this, "prefs_file_name");
 ```
 
 #### Default Values
 To specify default values for preference keys, use the `@PreferenceDefault` annotation on static field containing the default value, like so:
-```
+```java
 @PreferenceDefault("my_preference_key")
 static String MY_PREFERENCE_DEFAULT = "Unknown";
 
 @InjectPreference("my_preference_key")
 void updateForValue(String valueOfPreference) {
     // do something with the value
-    ...
+    // ...
 }
 ```
 
@@ -98,7 +98,7 @@ Build Configuration
 --------
 
 Add the following line to the gradle dependencies for your module.
-```
+```groovy
 compile 'me.denley.preferenceinjector:PreferenceInjector:2.1.1'
 ```
 
