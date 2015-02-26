@@ -1,14 +1,14 @@
 [![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-PreferenceInjector-brightgreen.svg?style=flat)](https://android-arsenal.com/details/1/1569)
 
 # PreferenceInjector
-A SharedPreferences injection library for Android. Using annotation processing, this library makes it easy to load SharedPreferences values and listen for changes.
+A SharedPreferences "injection" library for Android. Using annotation processing, this library makes it easy to load SharedPreferences values and listen for changes.
 
 
 How to Use
 -------
 
-#### Injecting Preference Values
-Use the `@InjectPreference` annotation to retrieve and inject preference values.
+#### Loading Preference Values
+Use the `@InjectPreference` annotation to retrieve and initialize ("inject") preference values.
 
 It can be used on any field, like so:
 ```java
@@ -58,8 +58,8 @@ void updateForValue(String valueOfPreference) {
 
 Be sure to match the field types and method parameter types with the type of value stored for the preference key. This can't be checked at compile time, and may cause runtime exceptions if a different type of value is stored into the `SharedPreferences` file.
 
-#### Triggering Injection and Listeners
-To trigger injection, and start listening for changes to preference values, you must call the following method in your target (a typical place for this is in an `onCreate`, `onCreateView` or `onFinishInflate` method):
+#### Triggering Initialization and Listeners
+To bind your preference values and start listening for changes, you must call the following method in your target (a typical place for this is in an `onCreate`, `onCreateView` or `onFinishInflate` method):
 ```java
 PreferenceInjector.inject(this);
 ```
@@ -74,7 +74,7 @@ Be sure to cancel your listeners when you no longer want updates (e.g. in your `
 PreferenceInjector.stopListening(this);
 ```
 
-To use a non-default `SharedPreferences` file, you can specify the name of the file when injecting, like so:
+To use a non-default `SharedPreferences` file, you can specify the name of the file when initializing, like so:
 ```java
 PreferenceInjector.inject(this, "prefs_file_name");
 ```
@@ -92,7 +92,7 @@ void updateForValue(String valueOfPreference) {
 }
 ```
 
-In the above example, the injector will call `updateForValue(MY_PREFERENCE_DEFAULT)` if no value is set for `"my_preference_key"` at injection time. For fields and methods annotated with `@OnPreferenceChange`, the default value will be passed whenever the value for the given key is removed.
+In the above example, `PreferenceInjector` will call `updateForValue(MY_PREFERENCE_DEFAULT)` if no value is set for `"my_preference_key"` on initialization. For fields and methods annotated with `@OnPreferenceChange`, the default value will be passed whenever the value for the given key is removed.
 
 Build Configuration
 --------
