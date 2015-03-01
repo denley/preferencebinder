@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 ## Unrealeased
 ### Added
 - Optional "listen" flag for `@InjectPreference` annotation as shorthand for also adding `@OnPreferenceChange` annotation to the same element
+- `OnPreferenceChange` annotations on methods can now contain multiple keys (if the method has zero parameters)
 
 ### Changed
 - Method calls now always occur after field updates for any given preference key (for both initialization and updates)
