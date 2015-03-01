@@ -58,7 +58,7 @@ void setValue(String valueOfPreference) {
 
 When annotating a method with `OnPreferenceChange`, you may specify more than one key. In this case, the method will be called when any value for one of the specified keys changes. For example:
 ```java
-@OnPreferenceChange({"show_full_names", "use_small_icons})
+@OnPreferenceChange({"show_full_names", "use_small_icons"})
 void refreshList() {
     adapter.notifyDataSetChanged();
 }
