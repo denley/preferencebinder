@@ -11,6 +11,7 @@ import android.widget.CheckBox;
 import android.widget.SeekBar;
 
 import me.denley.preferenceinjector.InjectPreference;
+import me.denley.preferenceinjector.OnPreferenceChange;
 import me.denley.preferenceinjector.PreferenceDefault;
 import me.denley.preferenceinjector.PreferenceInjector;
 import me.denley.preferenceinjector.R;
@@ -56,12 +57,12 @@ public class MainActivity extends Activity {
     }
 
     @InjectPreference(value = "boolean_pref_key", listen = true)
-    void onNewValue2(){
+    void onNewValue2(boolean prefValue){
         booleanPreferenceDisplay.setChecked(booleanPrefValue);
     }
 
-    @InjectPreference(value = "arbitrary_pref_key", listen = true)
-    void onNewValu3(){
+    @OnPreferenceChange({"integer_pref_key", "boolean_pref_key"})
+    void onNewValue3(){
 
     }
 

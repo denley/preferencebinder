@@ -14,6 +14,6 @@ import static java.lang.annotation.RetentionPolicy.CLASS;
 public @interface OnPreferenceChange {
 
     /** SharedPreferences key to listen for changes to its value. */
-    String value();
+    String[] value();
 
 }

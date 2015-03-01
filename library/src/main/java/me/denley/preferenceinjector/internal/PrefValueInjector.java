@@ -329,6 +329,7 @@ public class PrefValueInjector {
         builder.append(INDENT_3).append("}");
         emitListenerDefaultAssignment(builder, injection, bindings);
         builder.append("\n");
+        emitEmptyValueListenerBindings(builder, bindings);
     }
 
     private void emitListenerDefaultAssignment(StringBuilder builder, PrefInjection injection, Collection<ListenerBinding> bindings){
@@ -349,9 +350,18 @@ public class PrefValueInjector {
             }
         }
         for (ListenerBinding binding : bindings) {
-            if(binding.getBindingType() == ElementType.METHOD) {
+            if(binding.getBindingType() == ElementType.METHOD && binding.getType()!=null) {
                 builder.append(INDENT_4);
                 emitMethodCall(builder, assignment, binding);
+            }
+        }
+    }
+
+    private void emitEmptyValueListenerBindings(StringBuilder builder, Collection<ListenerBinding> bindings) {
+        for (ListenerBinding binding : bindings) {
+            if(binding.getBindingType() == ElementType.METHOD && binding.getType()==null) {
+                builder.append(INDENT_3);
+                emitMethodCall(builder, null, binding);
             }
         }
     }
