@@ -175,12 +175,13 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
         }
 
         // Assemble information on the injection point.
-        TypeElement enclosingElement = (TypeElement) annotatedElement.getEnclosingElement();
+        final TypeElement enclosingElement = (TypeElement) annotatedElement.getEnclosingElement();
         final InjectPreference annotation = annotatedElement.getAnnotation(InjectPreference.class);
-        String preferenceKey = annotation.value();
-        String name = annotatedElement.getSimpleName().toString();
+        final String preferenceKey = annotation.value();
+        final String name = annotatedElement.getSimpleName().toString();
 
-        boolean isField = annotatedElement.getKind().isField();
+        final boolean isField = annotatedElement.getKind().isField();
+        final ElementType elementType = isField?ElementType.FIELD:ElementType.METHOD;
         String type;
 
         if(isField){
@@ -202,8 +203,14 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
         }
 
         PrefValueInjector injector = getOrCreateTargetClass(targetClassMap, enclosingElement);
-        InitBinding binding = new InitBinding(name, type, isField?ElementType.FIELD:ElementType.METHOD);
+
+        InitBinding binding = new InitBinding(name, type, elementType);
         injector.addBinding(preferenceKey, binding);
+
+        if(annotation.listen()) {
+            ListenerBinding listenerBinding = new ListenerBinding(name, type, elementType);
+            injector.addBinding(preferenceKey, listenerBinding);
+        }
 
         // Add the type-erased version to the valid injection targets set.
         erasedTargetNames.add(enclosingElement.toString());

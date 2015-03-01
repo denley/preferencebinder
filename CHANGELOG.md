@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## Unrealeased
+### Added
+- Optional "listen" flag for `@InjectPreference` annotation as shorthand for also adding `@OnPreferenceChange` annotation to the same element
+
 ## 2.1.1 - 2015-02-25
 ### Added
 - `PreferenceInjector.inject(Fragment target)` method. The `Context` can be inferred from the `Fragment`.

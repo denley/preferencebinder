@@ -16,4 +16,7 @@ public @interface InjectPreference {
     /** SharedPreferences key for the preference value to be found */
     String value();
 
+    /** Whether or not to update this field or call this method again when the preference value changes */
+    boolean listen() default false;
+
 }

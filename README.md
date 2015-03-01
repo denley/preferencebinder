@@ -45,11 +45,10 @@ void valueChanged(String valueOfPreference) {
 }
 ```
 
-Typically, you might use `@InjectPreference` and `OnPreferenceChange` together, like so:
+Typically you might want to use `@InjectPreference` and `OnPreferenceChange` together, to both initialize and respond to changes. Instead of adding both annotations, you can simply use the "listen" flag in the `@InjectPreference` annotation, like so:
 ```java
-@InjectPreference("my_preference_key")
-@OnPreferenceChange("my_preference_key")
-void updateForValue(String valueOfPreference) {
+@InjectPreference(value = "my_preference_key", listen = true)
+void setValue(String valueOfPreference) {
     // do something with the value
     ...
 }
