@@ -52,20 +52,22 @@ public class PrefValueInjector {
 
     private PrefInjection getOrCreatePrefInjection(String key, String typeDef) {
         final String defaultTypeDef = defaultTypeMap.get(key);
-        if(defaultTypeDef!=null && !defaultTypeDef.equals(typeDef)){
+        if(defaultTypeDef!=null && typeDef!=null && !defaultTypeDef.equals(typeDef)){
             throw new IllegalArgumentException("Default value type ("+defaultTypeDef
                     +") does not match injection type ("+typeDef+") for \"" + key+"\"");
         }
 
-        PrefInjection viewId = prefKeyMap.get(key);
-        if (viewId == null) {
-            viewId = new PrefInjection(key, getType(key, typeDef), defaultFieldMap.get(key));
-            prefKeyMap.put(key, viewId);
-        }else if(!viewId.getType().getFieldTypeDef().equals(typeDef)) {
+        PrefInjection injection = prefKeyMap.get(key);
+        if (injection == null) {
+            injection = new PrefInjection(key, getType(key, typeDef), defaultFieldMap.get(key));
+            prefKeyMap.put(key, injection);
+        }else if(injection.getType()==null) {
+            injection.setType(getType(key, typeDef));
+        }else if(typeDef!=null && !injection.getType().getFieldTypeDef().equals(typeDef)) {
             throw new IllegalArgumentException("Inconsistent type definitions for key " + key);
         }
 
-        return viewId;
+        return injection;
     }
 
     String getFqcn() {
@@ -177,7 +179,12 @@ public class PrefValueInjector {
                 .append("if (prefs.contains(\"")
                 .append(injection.getKey())
                 .append("\")) {\n");
-        emitInitialValueLoad(builder, injection);
+
+        if(injection.getType()!=null) {
+            builder.append(INDENT_3);
+            emitInitialValueLoad(builder, injection);
+        }
+
         emitInitializationSetters(builder, injection.getKey(), initializationBindings);
         builder.append(INDENT_2).append("}");
         emitDefaultInitialization(builder, injection, initializationBindings);
@@ -204,23 +211,23 @@ public class PrefValueInjector {
     }
 
     private void emitInitializationSetters(StringBuilder builder, String assignment, Collection<InitBinding> initializationBindings) {
+        // Update fields before making method calls
         for (InitBinding binding : initializationBindings) {
-            emitInitializationSetter(builder, assignment, binding);
+            if(binding.getBindingType()== ElementType.FIELD) {
+                builder.append(INDENT_3);
+                emitFieldUpdate(builder,assignment,  binding);
+            }
         }
-    }
-
-    private void emitInitializationSetter(StringBuilder builder, String assignment, InitBinding binding){
-        builder.append(INDENT_3);
-        if(binding.getBindingType()== ElementType.METHOD) {
-            emitMethodCall(builder, assignment, binding);
-        } else {
-            emitFieldUpdate(builder,assignment,  binding);
+        for (InitBinding binding : initializationBindings) {
+            if(binding.getBindingType()== ElementType.METHOD) {
+                builder.append(INDENT_3);
+                emitMethodCall(builder, assignment, binding);
+            }
         }
     }
 
     private void emitInitialValueLoad(StringBuilder builder, PrefInjection injection){
-        builder.append(INDENT_3)
-                .append(injection.getType().getFieldTypeDef())
+        builder.append(injection.getType().getFieldTypeDef())
                 .append(" ")
                 .append(injection.getKey())
                 .append(" = prefs.")
@@ -313,17 +320,10 @@ public class PrefValueInjector {
                 .append(injection.getKey())
                 .append("\")) {\n");
 
-        builder.append(INDENT_4)
-                .append(injection.getType().getFieldTypeDef())
-                .append(" ")
-                .append(injection.getKey())
-                .append(" = prefs.")
-                .append(injection.getType().getSharedPrefsMethodName())
-                .append("(\"")
-                .append(injection.getKey())
-                .append("\", ")
-                .append(injection.getType().getDefaultValue())
-                .append(");\n");
+        if(injection.getType()!=null) {
+            builder.append(INDENT_4);
+            emitInitialValueLoad(builder, injection);
+        }
 
         emitListenerBindings(builder, injection.getKey(), bindings);
         builder.append(INDENT_3).append("}");
@@ -341,17 +341,18 @@ public class PrefValueInjector {
     }
 
     private void emitListenerBindings(StringBuilder builder, String assignment, Collection<ListenerBinding> bindings) {
+        // Update fields before method calls
         for (ListenerBinding binding : bindings) {
-            emitListenerBinding(builder, assignment, binding);
+            if(binding.getBindingType() == ElementType.FIELD) {
+                builder.append(INDENT_4);
+                emitFieldUpdate(builder, assignment, binding);
+            }
         }
-    }
-
-    private void emitListenerBinding(StringBuilder builder, String assignment, ListenerBinding binding) {
-        builder.append(INDENT_4);
-        if(binding.getBindingType() == ElementType.FIELD) {
-            emitFieldUpdate(builder, assignment, binding);
-        } else {
-            emitMethodCall(builder, assignment, binding);
+        for (ListenerBinding binding : bindings) {
+            if(binding.getBindingType() == ElementType.METHOD) {
+                builder.append(INDENT_4);
+                emitMethodCall(builder, assignment, binding);
+            }
         }
     }
 
@@ -376,12 +377,18 @@ public class PrefValueInjector {
     private void emitMethodCall(StringBuilder builder, String assignment, Binding binding){
         builder.append("target.")
                 .append(binding.getName())
-                .append("(")
-                .append(assignment)
-                .append(");\n");
+                .append("(");
+        if(binding.getType()!=null) {
+            builder.append(assignment);
+        }
+        builder.append(");\n");
     }
 
     private PrefType getType(String key, String typeDef){
+        if(typeDef==null){
+            return null;
+        }
+
         for(PrefType type:PrefType.values()){
             if(type.getFieldTypeDef().equals(typeDef)){
                 return type;

@@ -191,15 +191,20 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
             ExecutableElement executableElement = (ExecutableElement) annotatedElement;
             List<? extends VariableElement> params = executableElement.getParameters();
 
-            if(params.size() != 1){
-                error(annotatedElement,
-                        "Methods annotated with @InjectPreference must have a single parameter. (%s.%s)",
-                        enclosingElement.getQualifiedName(),
-                        name);
-                return;
+            switch(params.size()){
+                case 0:
+                    type = null;
+                    break;
+                case 1:
+                    type = params.get(0).asType().toString();
+                    break;
+                default:
+                    error(annotatedElement,
+                            "Methods annotated with @InjectPreference must have a single parameter. (%s.%s)",
+                            enclosingElement.getQualifiedName(),
+                            name);
+                    return;
             }
-
-            type = params.get(0).asType().toString();
         }
 
         PrefValueInjector injector = getOrCreateTargetClass(targetClassMap, enclosingElement);
@@ -283,15 +288,20 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
             ExecutableElement executableElement = (ExecutableElement) annotatedElement;
             List<? extends VariableElement> params = executableElement.getParameters();
 
-            if(params.size() != 1){
-                error(annotatedElement,
-                        "Methods annotated with @OnPreferenceChange must have a single parameter. (%s.%s)",
-                        enclosingElement.getQualifiedName(),
-                        name);
-                return;
+            switch(params.size()){
+                case 0:
+                    type = null;
+                    break;
+                case 1:
+                    type = params.get(0).asType().toString();
+                    break;
+                default:
+                    error(annotatedElement,
+                            "Methods annotated with @OnPreferenceChange must have a single parameter. (%s.%s)",
+                            enclosingElement.getQualifiedName(),
+                            name);
+                    return;
             }
-
-            type = params.get(0).asType().toString();
         }
 
         PrefValueInjector injector = getOrCreateTargetClass(targetClassMap, enclosingElement);

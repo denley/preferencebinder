@@ -9,7 +9,7 @@ import java.util.Set;
  */
 public class PrefInjection {
     private final String key;
-    private final PrefType type;
+    private PrefType type;
     private final String defaultStaticField;
     private final Set<Binding> bindings = new LinkedHashSet<>();
 
@@ -25,6 +25,10 @@ public class PrefInjection {
 
     public PrefType getType() {
         return type;
+    }
+
+    public void setType(PrefType type) {
+        this.type = type;
     }
 
     public String getDefaultStaticField() {

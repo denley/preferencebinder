@@ -56,8 +56,13 @@ public class MainActivity extends Activity {
     }
 
     @InjectPreference(value = "boolean_pref_key", listen = true)
-    void onNewValue2(boolean newValue){
+    void onNewValue2(){
         booleanPreferenceDisplay.setChecked(booleanPrefValue);
+    }
+
+    @InjectPreference(value = "arbitrary_pref_key", listen = true)
+    void onNewValu3(){
+
     }
 
     private void startHandlerOnBackgroundThread(){
