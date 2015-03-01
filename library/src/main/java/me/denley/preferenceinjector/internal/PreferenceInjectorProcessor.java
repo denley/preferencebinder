@@ -198,7 +198,7 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
                         name);
                 return;
             }
-            
+
             type = params.get(0).asType().toString();
         }
 
@@ -276,6 +276,14 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
         final PrefValueInjector injector = getOrCreateTargetClass(targetClassMap, enclosingElement);
 
         if(annotatedElement.getKind().isField()){
+            if(preferenceKeys.length!=1) {
+                error(annotatedElement,
+                        "Fields annotated with @OnPreferenceChange must specify a single preference key. (%s.%s)",
+                        enclosingElement.getQualifiedName(),
+                        name);
+                return;
+            }
+
             final String type = annotatedElement.asType().toString();
             final ListenerBinding binding = new ListenerBinding(name, type, ElementType.FIELD);
             injector.addBinding(preferenceKeys[0], binding);
@@ -290,7 +298,7 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
                             "@OnPreferenceChange annotations must specify a preference key. (%s.%s)",
                             enclosingElement.getQualifiedName(),
                             name);
-                    break;
+                    return;
                 case 1:
                     String type;
                     switch(params.size()){
