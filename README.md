@@ -108,6 +108,26 @@ Add the following line to the gradle dependencies for your module.
 compile 'me.denley.preferenceinjector:PreferenceInjector:2.2.0'
 ```
 
+ProGuard
+--------
+
+When using ProGuard, you need to specify that generated classes should be kept, and that annotated fields and methods should not be renamed. To achieve these criteria, the following lines can be added to your ProGuard configuration:
+
+```
+-keep class me.denley.preferenceinjector.** { *; }
+-dontwarn me.denley.preferenceinjector.internal.**
+-keep class **$$SharedPreferenceInjector { *; }
+
+-keepclasseswithmembernames class * {
+    @me.denley.preferenceinjector.* <fields>;
+}
+
+-keepclasseswithmembernames class * {
+    @me.denley.preferenceinjector.* <methods>;
+}
+```
+
+
 License
 -------
 
