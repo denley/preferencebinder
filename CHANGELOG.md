@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## 2.2.1 - 2015-03-28
+### Fixed
+- Set minSdk to 4, to prevent unnecessary permissions being added by default (see [this reference](https://code.google.com/p/android/issues/detail?id=4101) for explanation)
+
 ## 2.2.0 - 2015-03-01
 ### Added
 - Optional "listen" flag for `@InjectPreference` annotation as shorthand for also adding `@OnPreferenceChange` annotation to the same element

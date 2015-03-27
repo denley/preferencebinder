@@ -105,7 +105,7 @@ Build Configuration
 
 Add the following line to the gradle dependencies for your module.
 ```groovy
-compile 'me.denley.preferenceinjector:PreferenceInjector:2.2.0'
+compile 'me.denley.preferenceinjector:PreferenceInjector:2.2.1'
 ```
 
 ProGuard
