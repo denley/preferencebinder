@@ -1,13 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 21
+    compileSdkVersion 22
     buildToolsVersion "20.0.0"
 
     defaultConfig {
         applicationId "me.denley.preferenceinjector.sample"
         minSdkVersion 11
-        targetSdkVersion 21
+        targetSdkVersion 22
         versionCode project.VERSION_CODE
         versionName project.VERSION_NAME
     }
