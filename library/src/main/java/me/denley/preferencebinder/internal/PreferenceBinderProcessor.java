@@ -33,6 +33,7 @@ import me.denley.preferencebinder.PreferenceDefault;
 
 import static javax.lang.model.element.ElementKind.CLASS;
 import static javax.lang.model.element.Modifier.PRIVATE;
+import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
@@ -66,6 +67,7 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
     @Override public boolean process(Set<? extends TypeElement> elements, RoundEnvironment env) {
         targetClassMap = new LinkedHashMap<>();
         erasedTargetNames = new LinkedHashSet<>();
+        PrefValueBinder.clearDefaults();
 
         Map<TypeElement, PrefValueBinder> targetClassMap = findAndParseAnnotations(env);
 
@@ -117,11 +119,11 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
     }
 
     private void parseDefaultFieldName(Element annotatedElement) {
-        if (isAccessibleAndStatic(BindPref.class, annotatedElement)) {
+        if (isAccessibleAndStatic(PreferenceDefault.class, annotatedElement)) {
             return;
         }
 
-        // Assemble information on the bindion point.
+        // Assemble information on the binding point.
         TypeElement enclosingElement = (TypeElement) annotatedElement.getEnclosingElement();
         final PreferenceDefault annotation = annotatedElement.getAnnotation(PreferenceDefault.class);
         String preferenceKey = annotation.value();
@@ -137,10 +139,9 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
             return;
         }
 
-        PrefValueBinder binder = getOrCreateTargetClass(targetClassMap, enclosingElement);
-        binder.addDefault(preferenceKey, name, type);
+        PrefValueBinder.addDefault(preferenceKey, name, type, enclosingElement);
 
-        // Add the type-erased version to the valid bindion targets set.
+        // Add the type-erased version to the valid binding targets set.
         erasedTargetNames.add(enclosingElement.toString());
     }
 
@@ -240,7 +241,7 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
             String parentClassName = getClassName(enclosingElement, classPackage);
             String className = parentClassName + SUFFIX;
 
-            binder = new PrefValueBinder(classPackage, className, parentClassName, targetType);
+            binder = new PrefValueBinder(classPackage, className, targetType);
             targetClassMap.put(enclosingElement, binder);
         }
         return binder;
@@ -291,8 +292,8 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
 
         // Verify method modifiers.
         Set<Modifier> modifiers = element.getModifiers();
-        if (modifiers.contains(PRIVATE)) {
-            error(element, "@%s annotated elements must not be private. (%s.%s)",
+        if (!modifiers.contains(PUBLIC) || !modifiers.contains(STATIC)) {
+            error(element, "@%s annotated elements must have public and static modifiers. (%s.%s)",
                     annotationClass.getSimpleName(), enclosingElement.getQualifiedName(),
                     element.getSimpleName());
             hasError = true;

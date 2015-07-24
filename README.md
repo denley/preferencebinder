@@ -72,7 +72,7 @@ void onShowFullNamesChanged(boolean showFullNames) {
 #### Default Values
 To specify default values for preference keys, use the `@PreferenceDefault` annotation on static field containing the default value, like so:
 ```java
-@PreferenceDefault("my_preference_key") static String MY_PREFERENCE_DEFAULT = "Unknown";
+@PreferenceDefault("my_preference_key") public static String MY_PREFERENCE_DEFAULT = "Unknown";
 
 @BindPref("my_preference_key") void updateForValue(String valueOfPreference) {
     // do something with the value
@@ -81,6 +81,8 @@ To specify default values for preference keys, use the `@PreferenceDefault` anno
 ```
 
 In the above example, `PreferenceBinder` will call `updateForValue(MY_PREFERENCE_DEFAULT)` if no value is set for `"my_preference_key"` on initialization, or if the value for the given key is removed (with "listening" enabled).
+
+Default values apply to your entire application, so you don't need to specify them in each class. You might find it convenient to assign them all in a single utility class.
 
 Build Configuration
 --------

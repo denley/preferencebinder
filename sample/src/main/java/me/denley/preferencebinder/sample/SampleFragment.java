@@ -16,16 +16,12 @@ import java.util.Set;
 
 import me.denley.preferencebinder.BindPref;
 import me.denley.preferencebinder.PreferenceBinder;
-import me.denley.preferencebinder.PreferenceDefault;
 import me.denley.preferencebinder.R;
 
 public class SampleFragment extends Fragment {
 
     private static final long PREFERENCE_CHANGE_INTERVAL_MS = 500;
     private static final long PREFERENCE_CHANGE_INITIAL_WAIT_MS = 3000;
-
-    @PreferenceDefault("integer_pref_key")
-    static final int INTEGER_PREF_DEFAULT = 50;
 
     CheckBox booleanPreferenceDisplay;
     SeekBar integerPreferenceDisplay;

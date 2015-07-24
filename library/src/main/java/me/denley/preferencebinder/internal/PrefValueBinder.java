@@ -2,9 +2,12 @@ package me.denley.preferencebinder.internal;
 
 import java.lang.annotation.ElementType;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
+
+import javax.lang.model.element.TypeElement;
 
 public class PrefValueBinder {
     private static final String INDENT = "    ";
@@ -12,35 +15,43 @@ public class PrefValueBinder {
     private static final String INDENT_3 = "            ";
     private static final String INDENT_4 = "                ";
 
+    private final static Map<String, String> defaultFieldMap = new HashMap<>();
+    private final static Map<String, String> defaultTypeMap = new HashMap<>();
+
+    static void clearDefaults() {
+        defaultFieldMap.clear();
+        defaultTypeMap.clear();
+    }
+
+    static void addDefault(String key, String defaultFieldName, String type, TypeElement enclosingElement) {
+        if(defaultFieldMap.containsKey(key)){
+            throw new IllegalArgumentException("Default value set more than once for \""+key);
+        }
+
+        final String qualifiedFieldCall = enclosingElement.getQualifiedName() + "." + defaultFieldName;
+
+        defaultFieldMap.put(key, qualifiedFieldCall);
+        defaultTypeMap.put(key, type);
+    }
+
+
+
     private final Map<String, PrefBinding> prefKeyMap = new LinkedHashMap<>();
-    private final Map<String, String> defaultFieldMap = new LinkedHashMap<>();
-    private final Map<String, String> defaultTypeMap = new LinkedHashMap<>();
     private final String classPackage;
     private final String className;
-    private final String parentClassName;
     private final String targetClass;
     private String parentBinder;
 
     private boolean hasListenerBindings;
 
-    PrefValueBinder(String classPackage, String className, String parentClassName, String targetClass) {
+    PrefValueBinder(String classPackage, String className, String targetClass) {
         this.classPackage = classPackage;
         this.className = className;
-        this.parentClassName = parentClassName;
         this.targetClass = targetClass;
     }
 
     void addBinding(String key, Binding binding) {
         getOrCreatePrefBinding(key, binding.getType()).addBinding(binding);
-    }
-
-    void addDefault(String key, String defaultFieldName, String type) {
-        if(defaultFieldMap.containsKey(key)){
-            throw new IllegalArgumentException("Default value set more than once for \""+key+"\" in "+getFqcn());
-        }
-
-        defaultFieldMap.put(key, defaultFieldName);
-        defaultTypeMap.put(key, type);
     }
 
     void setParentBinder(String parentBinder) {
@@ -192,7 +203,7 @@ public class PrefValueBinder {
         final String defaultFieldName = bindion.getDefaultStaticField();
         if(defaultFieldName!=null) {
             builder.append(" else {\n");
-            emitInitializationSetters(builder, parentClassName + "." + defaultFieldName, initializationBindings);
+            emitInitializationSetters(builder, defaultFieldName, initializationBindings);
             builder.append(INDENT_2).append("}");
         }
     }
@@ -212,7 +223,7 @@ public class PrefValueBinder {
         for (InitBinding binding : initializationBindings) {
             if(binding.getBindingType()== ElementType.FIELD) {
                 builder.append(INDENT_3);
-                emitFieldUpdate(builder,assignment,  binding);
+                emitFieldUpdate(builder, assignment, binding);
             }
         }
         for (InitBinding binding : initializationBindings) {
@@ -333,7 +344,7 @@ public class PrefValueBinder {
         final String defaultFieldName = bindion.getDefaultStaticField();
         if(defaultFieldName!=null) {
             builder.append(" else {\n");
-            emitListenerBindings(builder, parentClassName+"."+defaultFieldName, bindings);
+            emitListenerBindings(builder, defaultFieldName, bindings);
             builder.append(INDENT_3).append("}");
         }
     }
