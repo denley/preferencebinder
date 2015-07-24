@@ -1,4 +1,4 @@
-package me.denley.preferenceinjector.internal;
+package me.denley.preferencebinder.internal;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -28,18 +28,17 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.tools.JavaFileObject;
 
-import me.denley.preferenceinjector.InjectPreference;
-import me.denley.preferenceinjector.OnPreferenceChange;
-import me.denley.preferenceinjector.PreferenceDefault;
+import me.denley.preferencebinder.BindPref;
+import me.denley.preferencebinder.PreferenceDefault;
 
 import static javax.lang.model.element.ElementKind.CLASS;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.STATIC;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
-public class PreferenceInjectorProcessor extends AbstractProcessor {
+public class PreferenceBinderProcessor extends AbstractProcessor {
 
-    public static final String SUFFIX = "$$SharedPreferenceInjector";
+    public static final String SUFFIX = "$$SharedPreferenceBinder";
     public static final String ANDROID_PREFIX = "android.";
     public static final String JAVA_PREFIX = "java.";
 
@@ -48,7 +47,7 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
     private Elements elementUtils;
     private Filer filer;
 
-    private Map<TypeElement, PrefValueInjector> targetClassMap;
+    private Map<TypeElement, PrefValueBinder> targetClassMap;
     private Set<String> erasedTargetNames;
 
     @Override public synchronized void init(ProcessingEnvironment env) {
@@ -59,8 +58,7 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
 
     @Override public Set<String> getSupportedAnnotationTypes() {
         Set<String> supportTypes = new LinkedHashSet<String>();
-        supportTypes.add(InjectPreference.class.getCanonicalName());
-        supportTypes.add(OnPreferenceChange.class.getCanonicalName());
+        supportTypes.add(BindPref.class.getCanonicalName());
         supportTypes.add(PreferenceDefault.class.getCanonicalName());
         return supportTypes;
     }
@@ -69,31 +67,30 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
         targetClassMap = new LinkedHashMap<>();
         erasedTargetNames = new LinkedHashSet<>();
 
-        Map<TypeElement, PrefValueInjector> targetClassMap = findAndParseAnnotations(env);
+        Map<TypeElement, PrefValueBinder> targetClassMap = findAndParseAnnotations(env);
 
-        for (Map.Entry<TypeElement, PrefValueInjector> entry : targetClassMap.entrySet()) {
+        for (Map.Entry<TypeElement, PrefValueBinder> entry : targetClassMap.entrySet()) {
             TypeElement typeElement = entry.getKey();
-            PrefValueInjector injector = entry.getValue();
+            PrefValueBinder binder = entry.getValue();
 
             try {
-                JavaFileObject jfo = filer.createSourceFile(injector.getFqcn(), typeElement);
+                JavaFileObject jfo = filer.createSourceFile(binder.getFqcn(), typeElement);
                 Writer writer = jfo.openWriter();
-                writer.write(injector.brewJava());
+                writer.write(binder.brewJava());
                 writer.flush();
                 writer.close();
             } catch (IOException e) {
-                error(typeElement, "Unable to write injector for type %s: %s", typeElement, e.getMessage());
+                error(typeElement, "Unable to write binder for type %s: %s", typeElement, e.getMessage());
             }
         }
 
         return true;
     }
 
-    private Map<TypeElement, PrefValueInjector> findAndParseAnnotations(RoundEnvironment env) {
+    private Map<TypeElement, PrefValueBinder> findAndParseAnnotations(RoundEnvironment env) {
         findAndParseDefaultFieldNames(env);
-        findAndParseInjectPreferenceAnnotations(env);
-        findAndParseOnPreferenceChangeAnnotations(env);
-        findAndSetParentInjectors();
+        findAndParseBindPreferenceAnnotations(env);
+        findAndSetParentBinders();
         return targetClassMap;
     }
 
@@ -120,11 +117,11 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
     }
 
     private void parseDefaultFieldName(Element annotatedElement) {
-        if (isAccessibleAndStatic(InjectPreference.class, annotatedElement)) {
+        if (isAccessibleAndStatic(BindPref.class, annotatedElement)) {
             return;
         }
 
-        // Assemble information on the injection point.
+        // Assemble information on the bindion point.
         TypeElement enclosingElement = (TypeElement) annotatedElement.getEnclosingElement();
         final PreferenceDefault annotation = annotatedElement.getAnnotation(PreferenceDefault.class);
         String preferenceKey = annotation.value();
@@ -140,95 +137,113 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
             return;
         }
 
-        PrefValueInjector injector = getOrCreateTargetClass(targetClassMap, enclosingElement);
-        injector.addDefault(preferenceKey, name, type);
+        PrefValueBinder binder = getOrCreateTargetClass(targetClassMap, enclosingElement);
+        binder.addDefault(preferenceKey, name, type);
 
-        // Add the type-erased version to the valid injection targets set.
+        // Add the type-erased version to the valid bindion targets set.
         erasedTargetNames.add(enclosingElement.toString());
     }
 
-    private void findAndParseInjectPreferenceAnnotations(RoundEnvironment env){
-        final Set<? extends Element> injectPreferenceAnnotations = env.getElementsAnnotatedWith(InjectPreference.class);
-        parseInjectPreferenceAnnotations(injectPreferenceAnnotations);
+    private void findAndParseBindPreferenceAnnotations(RoundEnvironment env){
+        final Set<? extends Element> bindPreferenceAnnotations = env.getElementsAnnotatedWith(BindPref.class);
+        parseBindPreferenceAnnotations(bindPreferenceAnnotations);
     }
 
-    private void parseInjectPreferenceAnnotations(Set<? extends Element> injectPreferenceAnnotations) {
-        for (Element element : injectPreferenceAnnotations) {
-            parseInjectPreferenceOrFail(element);
+    private void parseBindPreferenceAnnotations(Set<? extends Element> bindPreferenceAnnotations) {
+        for (Element element : bindPreferenceAnnotations) {
+            parseBindPreferenceOrFail(element);
         }
     }
 
-    private void parseInjectPreferenceOrFail(Element annotatedElement) {
+    private void parseBindPreferenceOrFail(Element annotatedElement) {
         try {
-            parseInjectPreference(annotatedElement);
+            parseBindPreference(annotatedElement);
         } catch (Exception e) {
             StringWriter stackTrace = new StringWriter();
             e.printStackTrace(new PrintWriter(stackTrace));
 
-            error(annotatedElement, "Unable to generate preference injector for @InjectPreference.\n\n%s", stackTrace);
+            error(annotatedElement, "Unable to generate preference binder for @BindPreference.\n\n%s", stackTrace);
         }
     }
 
-    private void parseInjectPreference(Element annotatedElement) {
-        if (injectPreferenceAnnotationHasError(annotatedElement)) {
+    private void parseBindPreference(Element annotatedElement) {
+        if (bindPreferenceAnnotationHasError(annotatedElement)) {
             return;
         }
 
-        // Assemble information on the injection point.
+        // Assemble information on the bindion point.
         final TypeElement enclosingElement = (TypeElement) annotatedElement.getEnclosingElement();
-        final InjectPreference annotation = annotatedElement.getAnnotation(InjectPreference.class);
-        final String preferenceKey = annotation.value();
+        final BindPref annotation = annotatedElement.getAnnotation(BindPref.class);
+        final String[] preferenceKeys = annotation.value();
         final String name = annotatedElement.getSimpleName().toString();
 
         final boolean isField = annotatedElement.getKind().isField();
         final ElementType elementType = isField?ElementType.FIELD:ElementType.METHOD;
         String type;
 
-        if(isField){
+        if(!annotation.init() && !annotation.listen()) {
+            error(annotatedElement, "@BindPref binding has no effect (it should either initialize or listen)", enclosingElement.getQualifiedName(), name);
+            return;
+        } else if(preferenceKeys.length == 0) {
+            error(annotatedElement, "Missing preference key(s) for @BindPref annotation", enclosingElement.getQualifiedName(), name);
+            return;
+        } else if(isField){
+            if(preferenceKeys.length > 1) {
+                error(annotatedElement, "Multiple preference keys are only allowed for @BindPref method annotations (not fields)", enclosingElement.getQualifiedName(), name);
+                return;
+            }
             type = annotatedElement.asType().toString();
         }else {
-            // Assemble information on the injection point.
+            // Assemble information on the bindion point.
             ExecutableElement executableElement = (ExecutableElement) annotatedElement;
             List<? extends VariableElement> params = executableElement.getParameters();
 
-            if(params.size() != 1) {
+            if(preferenceKeys.length > 1) {
+                if(params.size() > 0) {
+                    error(annotatedElement, "@BindPref method annotations with multiple preference keys can not have method parameters", enclosingElement.getQualifiedName(), name);
+                    return;
+                }
+                type = null;
+            }else if(params.size() != 1) {
                 error(annotatedElement,
-                        "Methods annotated with @InjectPreference must have a single parameter. (%s.%s)",
+                        "Methods annotated with @BindPref must have a single parameter. (%s.%s)",
                         enclosingElement.getQualifiedName(),
                         name);
                 return;
+            }else {
+                type = params.get(0).asType().toString();
             }
-
-            type = params.get(0).asType().toString();
         }
 
-        PrefValueInjector injector = getOrCreateTargetClass(targetClassMap, enclosingElement);
+        PrefValueBinder binder = getOrCreateTargetClass(targetClassMap, enclosingElement);
 
-        InitBinding binding = new InitBinding(name, type, elementType);
-        injector.addBinding(preferenceKey, binding);
+        for(String preferenceKey : preferenceKeys) {
+            InitBinding binding = new InitBinding(name, type, elementType);
+            binder.addBinding(preferenceKey, binding);
 
-        if(annotation.listen()) {
-            ListenerBinding listenerBinding = new ListenerBinding(name, type, elementType);
-            injector.addBinding(preferenceKey, listenerBinding);
+            if (annotation.listen()) {
+                PrefListenerBinding prefListenerBinding = new PrefListenerBinding(name, type, elementType);
+                binder.addBinding(preferenceKey, prefListenerBinding);
+            }
         }
 
-        // Add the type-erased version to the valid injection targets set.
+        // Add the type-erased version to the valid binding targets set.
         erasedTargetNames.add(enclosingElement.toString());
     }
 
-    private PrefValueInjector getOrCreateTargetClass(Map<TypeElement, PrefValueInjector> targetClassMap,
+    private PrefValueBinder getOrCreateTargetClass(Map<TypeElement, PrefValueBinder> targetClassMap,
                                                 TypeElement enclosingElement) {
-        PrefValueInjector injector = targetClassMap.get(enclosingElement);
-        if (injector == null) {
+        PrefValueBinder binder = targetClassMap.get(enclosingElement);
+        if (binder == null) {
             String targetType = enclosingElement.getQualifiedName().toString();
             String classPackage = getPackageName(enclosingElement);
             String parentClassName = getClassName(enclosingElement, classPackage);
             String className = parentClassName + SUFFIX;
 
-            injector = new PrefValueInjector(classPackage, className, parentClassName, targetType);
-            targetClassMap.put(enclosingElement, injector);
+            binder = new PrefValueBinder(classPackage, className, parentClassName, targetType);
+            targetClassMap.put(enclosingElement, binder);
         }
-        return injector;
+        return binder;
     }
 
     private static String getClassName(TypeElement type, String packageName) {
@@ -236,123 +251,25 @@ public class PreferenceInjectorProcessor extends AbstractProcessor {
         return type.getQualifiedName().toString().substring(packageLen).replace('.', '$');
     }
 
-    private boolean injectPreferenceAnnotationHasError(Element element){
-        return isInaccessibleViaGeneratedCode(InjectPreference.class, element)
-                || isBindingInWrongPackage(InjectPreference.class, element);
+    private boolean bindPreferenceAnnotationHasError(Element element){
+        return isInaccessibleViaGeneratedCode(BindPref.class, element)
+                || isBindingInWrongPackage(BindPref.class, element);
     }
 
-    private void findAndParseOnPreferenceChangeAnnotations(RoundEnvironment env) {
-        final Set<? extends Element> injectPreferenceAnnotations = env.getElementsAnnotatedWith(OnPreferenceChange.class);
-        parseOnPreferenceChangeAnnotations(injectPreferenceAnnotations);
-    }
-
-    private void parseOnPreferenceChangeAnnotations(Set<? extends Element> injectPreferenceAnnotations) {
-        for (Element element : injectPreferenceAnnotations) {
-            parseOnPreferenceChangeAnnotationOrFail(element);
+    private void findAndSetParentBinders(){
+        for (Map.Entry<TypeElement, PrefValueBinder> entry : targetClassMap.entrySet()) {
+            findAndSetParentBinder(entry);
         }
     }
 
-    private void parseOnPreferenceChangeAnnotationOrFail(Element annotatedElement) {
-        try {
-            parseOnPreferenceChangeAnnotation(annotatedElement);
-        } catch (Exception e) {
-            StringWriter stackTrace = new StringWriter();
-            e.printStackTrace(new PrintWriter(stackTrace));
-            error(annotatedElement, "Unable to generate preference injector for @OnPreferenceChange.\n\n%s", stackTrace);
-        }
-    }
-
-    private void parseOnPreferenceChangeAnnotation(Element annotatedElement) {
-        if (onPreferenceChangeAnnotationHasError(annotatedElement)) {
-            return;
-        }
-
-        // Assemble information on the injection point.
-        final TypeElement enclosingElement = (TypeElement) annotatedElement.getEnclosingElement();
-        final OnPreferenceChange annotation = annotatedElement.getAnnotation(OnPreferenceChange.class);
-        final String[] preferenceKeys = annotation.value();
-        final String name = annotatedElement.getSimpleName().toString();
-
-        final PrefValueInjector injector = getOrCreateTargetClass(targetClassMap, enclosingElement);
-
-        if(annotatedElement.getKind().isField()){
-            if(preferenceKeys.length!=1) {
-                error(annotatedElement,
-                        "Fields annotated with @OnPreferenceChange must specify a single preference key. (%s.%s)",
-                        enclosingElement.getQualifiedName(),
-                        name);
-                return;
-            }
-
-            final String type = annotatedElement.asType().toString();
-            final ListenerBinding binding = new ListenerBinding(name, type, ElementType.FIELD);
-            injector.addBinding(preferenceKeys[0], binding);
-        }else {
-            // Assemble information on the injection point.
-            final ExecutableElement executableElement = (ExecutableElement) annotatedElement;
-            final List<? extends VariableElement> params = executableElement.getParameters();
-
-            switch(preferenceKeys.length) {
-                case 0:
-                    error(annotatedElement,
-                            "@OnPreferenceChange annotations must specify a preference key. (%s.%s)",
-                            enclosingElement.getQualifiedName(),
-                            name);
-                    return;
-                case 1:
-                    String type;
-                    switch(params.size()){
-                        case 0:
-                            type = null;
-                            break;
-                        case 1:
-                            type = params.get(0).asType().toString();
-                            break;
-                        default:
-                            error(annotatedElement,
-                                    "Methods annotated with @OnPreferenceChange with a single key may only have a single parameter. (%s.%s)",
-                                    enclosingElement.getQualifiedName(),
-                                    name);
-                            return;
-                    }
-
-                    ListenerBinding binding = new ListenerBinding(name, type, ElementType.METHOD);
-                    injector.addBinding(preferenceKeys[0], binding);
-                    break;
-                default:
-                    for(String key:preferenceKeys) {
-                        ListenerBinding keyBinding = new ListenerBinding(name, null, ElementType.METHOD);
-                        injector.addBinding(key, keyBinding);
-                    }
-                    break;
-            }
-
-            return;
-        }
-
-        // Add the type-erased version to the valid injection targets set.
-        erasedTargetNames.add(enclosingElement.toString());
-    }
-
-    private boolean onPreferenceChangeAnnotationHasError(Element element){
-        return isInaccessibleViaGeneratedCode(OnPreferenceChange.class, element)
-                || isBindingInWrongPackage(OnPreferenceChange.class, element);
-    }
-
-    private void findAndSetParentInjectors(){
-        for (Map.Entry<TypeElement, PrefValueInjector> entry : targetClassMap.entrySet()) {
-            findAndSetParentInjector(entry);
-        }
-    }
-
-    private void findAndSetParentInjector(Map.Entry<TypeElement, PrefValueInjector> entry) {
+    private void findAndSetParentBinder(Map.Entry<TypeElement, PrefValueBinder> entry) {
         String parentClassFqcn = findParentFqcn(entry.getKey(), erasedTargetNames);
         if (parentClassFqcn != null) {
-            entry.getValue().setParentInjector(parentClassFqcn + SUFFIX);
+            entry.getValue().setParentBinder(parentClassFqcn + SUFFIX);
         }
     }
 
-    /** Finds the parent injector type in the supplied set, if any. */
+    /** Finds the parent binder type in the supplied set, if any. */
     private String findParentFqcn(TypeElement typeElement, Set<String> parents) {
         TypeMirror type;
         while (true) {

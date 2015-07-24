@@ -1,4 +1,4 @@
-package me.denley.preferenceinjector;
+package me.denley.preferencebinder;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;

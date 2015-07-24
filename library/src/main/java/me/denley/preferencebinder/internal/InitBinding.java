@@ -1,10 +1,7 @@
-package me.denley.preferenceinjector.internal;
+package me.denley.preferencebinder.internal;
 
 import java.lang.annotation.ElementType;
 
-/**
- * Created by Denley on 16/02/2015.
- */
 public class InitBinding implements Binding {
     private final String name;
     private final String type;

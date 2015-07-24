@@ -1,4 +1,4 @@
-package me.denley.preferenceinjector.sample;
+package me.denley.preferencebinder.sample;
 
 import android.app.Activity;
 import android.os.Bundle;

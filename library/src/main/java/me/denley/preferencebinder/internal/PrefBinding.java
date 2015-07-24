@@ -1,19 +1,16 @@
-package me.denley.preferenceinjector.internal;
+package me.denley.preferencebinder.internal;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-/**
- * Created by Denley on 16/02/2015.
- */
-public class PrefInjection {
+public class PrefBinding {
     private final String key;
     private PrefType type;
     private final String defaultStaticField;
     private final Set<Binding> bindings = new LinkedHashSet<>();
 
-    PrefInjection(String key, PrefType type, String defaultField) {
+    PrefBinding(String key, PrefType type, String defaultField) {
         this.key = key;
         this.type = type;
         this.defaultStaticField = defaultField;

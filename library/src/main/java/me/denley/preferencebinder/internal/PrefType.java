@@ -1,8 +1,5 @@
-package me.denley.preferenceinjector.internal;
+package me.denley.preferencebinder.internal;
 
-/**
- * Created by Denley on 17/02/2015.
- */
 public enum PrefType {
     // Defaults are arbitrary as we always check that a value exists
     BOOLEAN("boolean", "getBoolean", "false"),
@@ -16,7 +13,7 @@ public enum PrefType {
     private String methodName;
     private String defaultValue;
 
-    private PrefType(String fieldTypeDef, String methodName, String defaultValue){
+    PrefType(String fieldTypeDef, String methodName, String defaultValue){
         this.fieldTypeDef = fieldTypeDef;
         this.methodName = methodName;
         this.defaultValue = defaultValue;

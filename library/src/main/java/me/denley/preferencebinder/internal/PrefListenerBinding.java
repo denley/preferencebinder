@@ -1,16 +1,13 @@
-package me.denley.preferenceinjector.internal;
+package me.denley.preferencebinder.internal;
 
 import java.lang.annotation.ElementType;
 
-/**
- * Created by Denley on 16/02/2015.
- */
-public class ListenerBinding implements Binding {
+public class PrefListenerBinding implements Binding {
     private final String name;
     private final String type;
     private final ElementType elementType;
 
-    public ListenerBinding(String name, String type, ElementType elementType) {
+    public PrefListenerBinding(String name, String type, ElementType elementType) {
         this.name = name;
         this.type = type;
         this.elementType = elementType;

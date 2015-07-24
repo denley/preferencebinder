@@ -25,16 +25,20 @@
 
 package javax.annotation;
 
-import java.lang.annotation.*;
-import static java.lang.annotation.ElementType.*;
-import static java.lang.annotation.RetentionPolicy.*;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
+
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.TYPE;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
  * The Resource annotation marks a resource that is needed
  * by the application.  This annotation may be applied to an
  * application component class, or to fields or methods of the
  * component class.  When the annotation is applied to a
- * field or method, the container will inject an instance
+ * field or method, the container will bind an instance
  * of the requested resource into the application component
  * when the component is initialized.  If the annotation is
  * applied to the component class, the annotation declares a

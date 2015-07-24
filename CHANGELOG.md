@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## 3.0.0 - Unreleased
+### Changed
+- New annotation `@BindPref` replaces both `@InjectPreference` and `@OnPreferenceChanged`. The `listen` flag now defaults to true
+- All instances of "inject", "injector", and "injection" have been replaced with "bind", "binding", and "binding".
+
 ## 2.2.1 - 2015-03-28
 ### Fixed
 - Set minSdk to 4, to prevent unnecessary permissions being added by default (see [this reference](https://code.google.com/p/android/issues/detail?id=4101) for explanation)
@@ -16,8 +21,8 @@ All notable changes to this project will be documented in this file.
 
 ## 2.1.1 - 2015-02-25
 ### Added
-- `PreferenceInjector.inject(Fragment target)` method. The `Context` can be inferred from the `Fragment`.
-- `PreferenceInjector.inject(Service target)` method. The `Context` can be inferred from the `Service`.
+- `PreferenceInjector.bind(Fragment target)` method. The `Context` can be inferred from the `Fragment`.
+- `PreferenceInjector.bind(Service target)` method. The `Context` can be inferred from the `Service`.
 
 ## 2.1.0 - 2015-02-19
 ### Added

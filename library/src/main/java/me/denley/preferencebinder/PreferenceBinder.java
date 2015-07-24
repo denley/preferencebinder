@@ -1,4 +1,4 @@
-package me.denley.preferenceinjector;
+package me.denley.preferencebinder;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -14,25 +14,22 @@ import android.view.View;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import me.denley.preferenceinjector.internal.PreferenceInjectorProcessor;
+import me.denley.preferencebinder.internal.PreferenceBinderProcessor;
 
-/**
- * Created by Denley on 15/02/2015.
- */
-public final class PreferenceInjector {
-    private PreferenceInjector(){
+public final class PreferenceBinder {
+    private PreferenceBinder(){
         throw new AssertionError("Instances are not allowed");
     }
 
     /** DO NOT USE: Exposed for generated code. */
-    public interface Injector<T> {
-        void inject(Context context, T target, SharedPreferences prefs);
+    public interface Binder<T> {
+        void bind(Context context, T target, SharedPreferences prefs);
         void stopListening(T target);
     }
 
-    static final Map<Class<?>, Injector<Object>> INJECTORS = new LinkedHashMap<Class<?>, Injector<Object>>();
-    static final Injector<Object> NOP_INJECTOR = new Injector<Object>() {
-        @Override public void inject(Context context, Object target, SharedPreferences prefs) { }
+    static final Map<Class<?>, Binder<Object>> BINDERS = new LinkedHashMap<Class<?>, Binder<Object>>();
+    static final Binder<Object> NOP_BINDER = new Binder<Object>() {
+        @Override public void bind(Context context, Object target, SharedPreferences prefs) { }
         @Override public void stopListening(Object target) {}
     };
 
@@ -42,8 +39,8 @@ public final class PreferenceInjector {
      *
      * @param target Target activity for field injection.
      */
-    public static void inject(Activity target) {
-        inject(target, target);
+    public static void bind(Activity target) {
+        bind(target, target);
     }
 
     /**
@@ -51,8 +48,8 @@ public final class PreferenceInjector {
      *
      * @param target Target Service for field injection.
      */
-    public static void inject(Service target) {
-        inject(target, target);
+    public static void bind(Service target) {
+        bind(target, target);
     }
 
     /**
@@ -60,8 +57,8 @@ public final class PreferenceInjector {
      *
      * @param target Target view for field injection.
      */
-    public static void inject(View target) {
-        inject(target.getContext(), target);
+    public static void bind(View target) {
+        bind(target.getContext(), target);
     }
 
     /**
@@ -69,8 +66,8 @@ public final class PreferenceInjector {
      *
      * @param target Target dialog for field injection.
      */
-    public static void inject(Dialog target) {
-        inject(target.getContext(), target);
+    public static void bind(Dialog target) {
+        bind(target.getContext(), target);
     }
 
     /**
@@ -79,14 +76,14 @@ public final class PreferenceInjector {
      * @param target Target fragment for field injection.
      */
     @TargetApi(Build.VERSION_CODES.HONEYCOMB)
-    public static void inject(Fragment target) {
+    public static void bind(Fragment target) {
         final Context context = target.getActivity();
 
         if(context==null) {
             throw new IllegalStateException("Fragment must be attached to an Activity before injecting");
         }
 
-        inject(context, target);
+        bind(context, target);
     }
 
     /**
@@ -95,8 +92,8 @@ public final class PreferenceInjector {
      * @param context The Context to use to load {@link SharedPreferences} values.
      * @param target Target for field injection.
      */
-    public static void inject(Context context, Object target){
-        inject(context, target, PreferenceManager.getDefaultSharedPreferences(context));
+    public static void bind(Context context, Object target){
+        bind(context, target, PreferenceManager.getDefaultSharedPreferences(context));
     }
 
     /**
@@ -105,8 +102,8 @@ public final class PreferenceInjector {
      * @param target Target for field injection.
      * @param prefsFileName The name of the {@link android.content.SharedPreferences} file to use.
      */
-    public static void inject(Activity target, String prefsFileName) {
-        inject(target, target, prefsFileName);
+    public static void bind(Activity target, String prefsFileName) {
+        bind(target, target, prefsFileName);
     }
 
     /**
@@ -115,8 +112,8 @@ public final class PreferenceInjector {
      * @param target Target Service for field injection.
      * @param prefsFileName The name of the {@link android.content.SharedPreferences} file to use.
      */
-    public static void inject(Service target, String prefsFileName) {
-        inject(target, target);
+    public static void bind(Service target, String prefsFileName) {
+        bind(target, target);
     }
 
     /**
@@ -125,8 +122,8 @@ public final class PreferenceInjector {
      * @param target Target for field injection.
      * @param prefsFileName The name of the {@link android.content.SharedPreferences} file to use.
      */
-    public static void inject(View target, String prefsFileName) {
-        inject(target.getContext(), target, prefsFileName);
+    public static void bind(View target, String prefsFileName) {
+        bind(target.getContext(), target, prefsFileName);
     }
 
     /**
@@ -135,8 +132,8 @@ public final class PreferenceInjector {
      * @param target Target for field injection.
      * @param prefsFileName The name of the {@link android.content.SharedPreferences} file to use.
      */
-    public static void inject(Dialog target, String prefsFileName) {
-        inject(target.getContext(), target, prefsFileName);
+    public static void bind(Dialog target, String prefsFileName) {
+        bind(target.getContext(), target, prefsFileName);
     }
 
     /**
@@ -146,14 +143,14 @@ public final class PreferenceInjector {
      * @param prefsFileName The name of the {@link android.content.SharedPreferences} file to use.
      */
     @TargetApi(Build.VERSION_CODES.HONEYCOMB)
-    public static void inject(Fragment target, String prefsFileName) {
+    public static void bind(Fragment target, String prefsFileName) {
         final Context context = target.getActivity();
 
         if(context==null) {
             throw new IllegalStateException("Fragment must be attached to an Activity before injecting");
         }
 
-        inject(context, target, prefsFileName);
+        bind(context, target, prefsFileName);
     }
 
     /**
@@ -163,8 +160,8 @@ public final class PreferenceInjector {
      * @param target Target for field injection.
      * @param prefsFileName The name of the {@link android.content.SharedPreferences} file to use.
      */
-    public static void inject(Context context, Object target, String prefsFileName) {
-        inject(context, target, context.getSharedPreferences(prefsFileName, Context.MODE_PRIVATE));
+    public static void bind(Context context, Object target, String prefsFileName) {
+        bind(context, target, context.getSharedPreferences(prefsFileName, Context.MODE_PRIVATE));
     }
 
     /**
@@ -172,47 +169,47 @@ public final class PreferenceInjector {
      *
      * @param target Target for field injection.
      */
-    public static void stopListening(Object target){
+    public static void unbind(Object target){
         Class<?> targetClass = target.getClass();
 
-        Injector<Object> injector = INJECTORS.get(targetClass);
-        if (injector != null) {
-            injector.stopListening(target);
+        Binder<Object> binder = BINDERS.get(targetClass);
+        if (binder != null) {
+            binder.stopListening(target);
         }
     }
 
-    private static void inject(Context context, Object target, SharedPreferences prefs){
+    private static void bind(Context context, Object target, SharedPreferences prefs){
         Class<?> targetClass = target.getClass();
 
         try{
-            Injector<Object> injector = findInjectorForClass(targetClass);
-            if (injector != null) {
-                injector.inject(context, target, prefs);
+            Binder<Object> binder = findBinderForClass(targetClass);
+            if (binder != null) {
+                binder.bind(context, target, prefs);
             }
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Unable to inject preferences for " + target, e);
+            throw new RuntimeException("Unable to bind preferences for " + target, e);
         }
     }
 
-    private static Injector<Object> findInjectorForClass(Class<?> cls) throws IllegalAccessException, InstantiationException {
-        Injector<Object> injector = INJECTORS.get(cls);
-        if (injector != null) {
-            return injector;
+    private static Binder<Object> findBinderForClass(Class<?> cls) throws IllegalAccessException, InstantiationException {
+        Binder<Object> binder = BINDERS.get(cls);
+        if (binder != null) {
+            return binder;
         }
         String clsName = cls.getName();
-        if (clsName.startsWith(PreferenceInjectorProcessor.ANDROID_PREFIX) || clsName.startsWith(PreferenceInjectorProcessor.JAVA_PREFIX)) {
-            return NOP_INJECTOR;
+        if (clsName.startsWith(PreferenceBinderProcessor.ANDROID_PREFIX) || clsName.startsWith(PreferenceBinderProcessor.JAVA_PREFIX)) {
+            return NOP_BINDER;
         }
         try {
-            Class<?> injectorClass = Class.forName(clsName + PreferenceInjectorProcessor.SUFFIX);
-            injector = (Injector<Object>) injectorClass.newInstance();
+            Class<?> binderClass = Class.forName(clsName + PreferenceBinderProcessor.SUFFIX);
+            binder = (Binder<Object>) binderClass.newInstance();
         } catch (ClassNotFoundException e) {
-            injector = findInjectorForClass(cls.getSuperclass());
+            binder = findBinderForClass(cls.getSuperclass());
         }
-        INJECTORS.put(cls, injector);
-        return injector;
+        BINDERS.put(cls, binder);
+        return binder;
     }
 
 }

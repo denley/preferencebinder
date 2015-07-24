@@ -1,4 +1,4 @@
-package me.denley.preferenceinjector.sample;
+package me.denley.preferencebinder.sample;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -10,11 +10,10 @@ import android.preference.PreferenceManager;
 import android.widget.CheckBox;
 import android.widget.SeekBar;
 
-import me.denley.preferenceinjector.InjectPreference;
-import me.denley.preferenceinjector.OnPreferenceChange;
-import me.denley.preferenceinjector.PreferenceDefault;
-import me.denley.preferenceinjector.PreferenceInjector;
-import me.denley.preferenceinjector.R;
+import me.denley.preferencebinder.BindPref;
+import me.denley.preferencebinder.PreferenceBinder;
+import me.denley.preferencebinder.PreferenceDefault;
+import me.denley.preferencebinder.R;
 
 
 public class MainActivity extends Activity {
@@ -28,7 +27,7 @@ public class MainActivity extends Activity {
     CheckBox booleanPreferenceDisplay;
     SeekBar integerPreferenceDisplay;
 
-    @InjectPreference(value = "boolean_pref_key", listen = true)
+    @BindPref(value = "boolean_pref_key", listen = true)
     boolean booleanPrefValue;
 
     Looper preferenceChangeLooper;
@@ -46,22 +45,22 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         booleanPreferenceDisplay = (CheckBox) findViewById(R.id.pref_boolean);
         integerPreferenceDisplay = (SeekBar) findViewById(R.id.pref_integer);
-        PreferenceInjector.inject(this);
+        PreferenceBinder.bind(this);
 
         startHandlerOnBackgroundThread();
     }
 
-    @InjectPreference(value = "integer_pref_key", listen = true)
+    @BindPref("integer_pref_key")
     void onNewValue(int newValue){
         integerPreferenceDisplay.setProgress(newValue);
     }
 
-    @InjectPreference(value = "boolean_pref_key", listen = true)
+    @BindPref("boolean_pref_key")
     void onNewValue2(boolean prefValue){
         booleanPreferenceDisplay.setChecked(booleanPrefValue);
     }
 
-    @OnPreferenceChange({"integer_pref_key", "boolean_pref_key"})
+    @BindPref(value = {"integer_pref_key", "boolean_pref_key"}, init = false)
     void onNewValue3(){
 
     }
@@ -95,7 +94,7 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onDestroy() {
-        PreferenceInjector.stopListening(this);
+        PreferenceBinder.unbind(this);
         if(preferenceChangeLooper != null) {
             preferenceChangeLooper.quit();
         }

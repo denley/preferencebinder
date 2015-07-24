@@ -1,4 +1,4 @@
-package me.denley.preferenceinjector.internal;
+package me.denley.preferencebinder.internal;
 
 import java.lang.annotation.ElementType;
 
