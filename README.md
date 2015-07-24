@@ -97,7 +97,7 @@ In addition to loading the preference value into the widget, `PreferenceBinder` 
 The following table outlines the widget binding types that are currently supported. If you would like to see a binding type included in this library, please post an issue for the feature request.
 
 "bindTo" type | Widget type | Method called | Saves user changes?
---- | --- | ---
+-------- | -------- | -------- | --------
 ASSIGN (default) | - | = | no
 ACTIVATED | View | setActivated | no
 ENABLED | View | setEnabled | no
