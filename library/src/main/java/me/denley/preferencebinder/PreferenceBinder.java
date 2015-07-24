@@ -24,13 +24,13 @@ public final class PreferenceBinder {
     /** DO NOT USE: Exposed for generated code. */
     public interface Binder<T> {
         void bind(Context context, T target, SharedPreferences prefs);
-        void stopListening(T target);
+        void unbind(T target);
     }
 
     static final Map<Class<?>, Binder<Object>> BINDERS = new LinkedHashMap<Class<?>, Binder<Object>>();
     static final Binder<Object> NOP_BINDER = new Binder<Object>() {
         @Override public void bind(Context context, Object target, SharedPreferences prefs) { }
-        @Override public void stopListening(Object target) {}
+        @Override public void unbind(Object target) {}
     };
 
 
@@ -174,7 +174,7 @@ public final class PreferenceBinder {
 
         Binder<Object> binder = BINDERS.get(targetClass);
         if (binder != null) {
-            binder.stopListening(target);
+            binder.unbind(target);
         }
     }
 

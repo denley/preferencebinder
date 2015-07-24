@@ -48,7 +48,7 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
     private Elements elementUtils;
     private Filer filer;
 
-    private Map<TypeElement, PrefValueBinder> targetClassMap;
+    private Map<TypeElement, BinderClassFactory> targetClassMap;
     private Set<String> erasedTargetNames;
 
     @Override public synchronized void init(ProcessingEnvironment env) {
@@ -67,13 +67,13 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
     @Override public boolean process(Set<? extends TypeElement> elements, RoundEnvironment env) {
         targetClassMap = new LinkedHashMap<>();
         erasedTargetNames = new LinkedHashSet<>();
-        PrefValueBinder.clearDefaults();
+        BinderClassFactory.clearDefaults();
 
-        Map<TypeElement, PrefValueBinder> targetClassMap = findAndParseAnnotations(env);
+        Map<TypeElement, BinderClassFactory> targetClassMap = findAndParseAnnotations(env);
 
-        for (Map.Entry<TypeElement, PrefValueBinder> entry : targetClassMap.entrySet()) {
+        for (Map.Entry<TypeElement, BinderClassFactory> entry : targetClassMap.entrySet()) {
             TypeElement typeElement = entry.getKey();
-            PrefValueBinder binder = entry.getValue();
+            BinderClassFactory binder = entry.getValue();
 
             try {
                 JavaFileObject jfo = filer.createSourceFile(binder.getFqcn(), typeElement);
@@ -89,7 +89,7 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
         return true;
     }
 
-    private Map<TypeElement, PrefValueBinder> findAndParseAnnotations(RoundEnvironment env) {
+    private Map<TypeElement, BinderClassFactory> findAndParseAnnotations(RoundEnvironment env) {
         findAndParseDefaultFieldNames(env);
         findAndParseBindPreferenceAnnotations(env);
         findAndSetParentBinders();
@@ -139,7 +139,7 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
             return;
         }
 
-        PrefValueBinder.addDefault(preferenceKey, name, type, enclosingElement);
+        BinderClassFactory.addDefault(preferenceKey, name, type, enclosingElement);
 
         // Add the type-erased version to the valid binding targets set.
         erasedTargetNames.add(enclosingElement.toString());
@@ -172,7 +172,7 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
             return;
         }
 
-        // Assemble information on the bindion point.
+        // Assemble information on the binding point.
         final TypeElement enclosingElement = (TypeElement) annotatedElement.getEnclosingElement();
         final BindPref annotation = annotatedElement.getAnnotation(BindPref.class);
         final String[] preferenceKeys = annotation.value();
@@ -193,13 +193,21 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
                 error(annotatedElement, "Multiple preference keys are only allowed for @BindPref method annotations (not fields)", enclosingElement.getQualifiedName(), name);
                 return;
             }
-            type = annotatedElement.asType().toString();
+
+            if(annotation.bindTo().prefType == null) {
+                type = annotatedElement.asType().toString();
+            } else {
+                type = annotation.bindTo().prefType;
+            }
         }else {
-            // Assemble information on the bindion point.
+            // Assemble information on the binding point.
             ExecutableElement executableElement = (ExecutableElement) annotatedElement;
             List<? extends VariableElement> params = executableElement.getParameters();
 
-            if(preferenceKeys.length > 1) {
+            if(annotation.bindTo() != WidgetBindingType.ASSIGN) {
+                error(annotatedElement, "@BindPref method annotations should not use the \"bindTo\" property", enclosingElement.getQualifiedName(), name);
+                return;
+            } else if(preferenceKeys.length > 1) {
                 if(params.size() > 0) {
                     error(annotatedElement, "@BindPref method annotations with multiple preference keys can not have method parameters", enclosingElement.getQualifiedName(), name);
                     return;
@@ -216,15 +224,15 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
             }
         }
 
-        PrefValueBinder binder = getOrCreateTargetClass(targetClassMap, enclosingElement);
+        BinderClassFactory binder = getOrCreateTargetClass(targetClassMap, enclosingElement);
+        Binding binding = new Binding(name, type, elementType, annotation.bindTo());
 
         for(String preferenceKey : preferenceKeys) {
-            InitBinding binding = new InitBinding(name, type, elementType);
-            binder.addBinding(preferenceKey, binding);
-
+            if(annotation.init()) {
+                binder.addInitBinding(preferenceKey, binding);
+            }
             if (annotation.listen()) {
-                PrefListenerBinding prefListenerBinding = new PrefListenerBinding(name, type, elementType);
-                binder.addBinding(preferenceKey, prefListenerBinding);
+                binder.addListenerBinding(preferenceKey, binding);
             }
         }
 
@@ -232,16 +240,16 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
         erasedTargetNames.add(enclosingElement.toString());
     }
 
-    private PrefValueBinder getOrCreateTargetClass(Map<TypeElement, PrefValueBinder> targetClassMap,
+    private BinderClassFactory getOrCreateTargetClass(Map<TypeElement, BinderClassFactory> targetClassMap,
                                                 TypeElement enclosingElement) {
-        PrefValueBinder binder = targetClassMap.get(enclosingElement);
+        BinderClassFactory binder = targetClassMap.get(enclosingElement);
         if (binder == null) {
             String targetType = enclosingElement.getQualifiedName().toString();
             String classPackage = getPackageName(enclosingElement);
             String parentClassName = getClassName(enclosingElement, classPackage);
             String className = parentClassName + SUFFIX;
 
-            binder = new PrefValueBinder(classPackage, className, targetType);
+            binder = new BinderClassFactory(classPackage, className, targetType);
             targetClassMap.put(enclosingElement, binder);
         }
         return binder;
@@ -258,12 +266,12 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
     }
 
     private void findAndSetParentBinders(){
-        for (Map.Entry<TypeElement, PrefValueBinder> entry : targetClassMap.entrySet()) {
+        for (Map.Entry<TypeElement, BinderClassFactory> entry : targetClassMap.entrySet()) {
             findAndSetParentBinder(entry);
         }
     }
 
-    private void findAndSetParentBinder(Map.Entry<TypeElement, PrefValueBinder> entry) {
+    private void findAndSetParentBinder(Map.Entry<TypeElement, BinderClassFactory> entry) {
         String parentClassFqcn = findParentFqcn(entry.getKey(), erasedTargetNames);
         if (parentClassFqcn != null) {
             entry.getValue().setParentBinder(parentClassFqcn + SUFFIX);

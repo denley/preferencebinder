@@ -13,6 +13,7 @@ import android.widget.SeekBar;
 import me.denley.preferencebinder.BindPref;
 import me.denley.preferencebinder.PreferenceBinder;
 import me.denley.preferencebinder.R;
+import me.denley.preferencebinder.internal.WidgetBindingType;
 
 
 public class MainActivity extends Activity {
@@ -21,7 +22,10 @@ public class MainActivity extends Activity {
     private static final long PREFERENCE_CHANGE_INITIAL_WAIT_MS = 3000;
 
 
+    @BindPref(value = "boolean_pref_key", bindTo = WidgetBindingType.CHECKED)
     CheckBox booleanPreferenceDisplay;
+
+    @BindPref(value = "integer_pref_key", bindTo = WidgetBindingType.SEEKBAR_PROGRESS, listen = false)
     SeekBar integerPreferenceDisplay;
 
     @BindPref(value = "boolean_pref_key", listen = true)
@@ -43,18 +47,7 @@ public class MainActivity extends Activity {
         booleanPreferenceDisplay = (CheckBox) findViewById(R.id.pref_boolean);
         integerPreferenceDisplay = (SeekBar) findViewById(R.id.pref_integer);
         PreferenceBinder.bind(this);
-
         startHandlerOnBackgroundThread();
-    }
-
-    @BindPref("integer_pref_key")
-    void onNewValue(int newValue){
-        integerPreferenceDisplay.setProgress(newValue);
-    }
-
-    @BindPref("boolean_pref_key")
-    void onNewValue2(boolean prefValue){
-        booleanPreferenceDisplay.setChecked(booleanPrefValue);
     }
 
     @BindPref(value = {"integer_pref_key", "boolean_pref_key"}, init = false)
@@ -92,6 +85,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onDestroy() {
         PreferenceBinder.unbind(this);
+        handler.removeCallbacks(externalPreferenceChanger);
         if(preferenceChangeLooper != null) {
             preferenceChangeLooper.quit();
         }

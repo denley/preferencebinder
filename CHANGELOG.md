@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 - All instances of "inject", "injector", and "injection" have been replaced with "bind", "binding", and "binding".
 - `@PreferenceDefault` annotated fields now apply globally (application-wide) rather than just for their containing class.
 
+### Added
+- `@BindPref` annotation may now be used on certain widget types (fields), to automatically bind the preference value to a widget's method. See README.md for details.
+
 ## 2.2.1 - 2015-03-28
 ### Fixed
 - Set minSdk to 4, to prevent unnecessary permissions being added by default (see [this reference](https://code.google.com/p/android/issues/detail?id=4101) for explanation)
@@ -36,7 +39,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Removed `initialize` flag from `@OnPreferenceChange` annotation, `@InjectPreference` can now be applied to methods instead
 - Removed `autoUpdate` flag from `@InjectPreference` annotation, `@OnPreferenceChange` can now be applied to fields instead
-- `PreferenceInjector.stopListening` no longer needs to be called if no `@OnPreferenceChange` annotations exist
+- `PreferenceInjector.unbind` no longer needs to be called if no `@OnPreferenceChange` annotations exist
 
 ## 1.0 - 2015-02-18
 ### Added

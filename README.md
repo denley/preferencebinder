@@ -84,6 +84,31 @@ In the above example, `PreferenceBinder` will call `updateForValue(MY_PREFERENCE
 
 Default values apply to your entire application, so you don't need to specify them in each class. You might find it convenient to assign them all in a single utility class.
 
+#### Widget Binding
+Preference values can also be bound directly into some standard Android widgets.
+
+For example, in the following code will automatically load the preference value for the key "sensitivity" and apply it to the `SeekBar` through its `setProgress' method.
+```java
+@BindPref(value = "sensitivity", bindTo = WidgetBindingType.SEEKBAR_PROGRESS)
+SeekBar sensitivity;
+```
+In addition to loading the preference value into the widget, `PreferenceBinder` will also listen for changes to the `SeekBar`'s progress value (from user input) and save the new value back into your SharedPreferences file for the given preference key!
+
+The following table outlines the widget binding types that are currently supported. If you would like to see a binding type included in this library, please post an issue for the feature request.
+
+"bindTo" type | Widget type | Method called | Saves user changes?
+--- | --- | ---
+ASSIGN (default) | - | = | no
+ACTIVATED | View | setActivated | no
+ENABLED | View | setEnabled | no
+SELECTED | View | setSelected | no
+VISIBILITY | View | setVisibility (View.VISIBLE or View.GONE) | no
+CHECKED | CompoundButton | setChecked | yes
+TEXT | TextView | setText | no
+SEEKBAR_PROGRESS | SeekBar | setProgress | yes
+PROGRESS | ProgressBar | setProgress | no
+MAX_PROGRESS | ProgressBar | setMax | no
+
 Build Configuration
 --------
 

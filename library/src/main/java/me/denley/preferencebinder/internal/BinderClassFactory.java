@@ -4,12 +4,11 @@ import java.lang.annotation.ElementType;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
 
 import javax.lang.model.element.TypeElement;
 
-public class PrefValueBinder {
+public class BinderClassFactory {
     private static final String INDENT = "    ";
     private static final String INDENT_2 = "        ";
     private static final String INDENT_3 = "            ";
@@ -44,14 +43,18 @@ public class PrefValueBinder {
 
     private boolean hasListenerBindings;
 
-    PrefValueBinder(String classPackage, String className, String targetClass) {
+    BinderClassFactory(String classPackage, String className, String targetClass) {
         this.classPackage = classPackage;
         this.className = className;
         this.targetClass = targetClass;
     }
 
-    void addBinding(String key, Binding binding) {
-        getOrCreatePrefBinding(key, binding.getType()).addBinding(binding);
+    void addInitBinding(String key, Binding binding) {
+        getOrCreatePrefBinding(key, binding.getType()).addInitBinding(binding);
+    }
+
+    void addListenerBinding(String key, Binding binding) {
+        getOrCreatePrefBinding(key, binding.getType()).addListenerBinding(binding);
     }
 
     void setParentBinder(String parentBinder) {
@@ -102,8 +105,8 @@ public class PrefValueBinder {
     }
 
     private boolean hasListenerBindings(){
-        for (PrefBinding bindion : prefKeyMap.values()) {
-            if(!collectListenerBindings(bindion).isEmpty()) {
+        for (PrefBinding binding : prefKeyMap.values()) {
+            if(!binding.getListenerBindings().isEmpty()) {
                 return true;
             }
         }
@@ -168,39 +171,51 @@ public class PrefValueBinder {
     }
 
     private void emitInitializationMethod(StringBuilder builder){
-        builder.append(INDENT).append("private void initializeTarget(T target, SharedPreferences prefs) {\n");
-        for (PrefBinding bindion : prefKeyMap.values()) {
-            emitInitializationIfNecessary(builder, bindion);
+        builder.append(INDENT).append("private void initializeTarget(T target, final SharedPreferences prefs) {\n");
+        for (PrefBinding binding : prefKeyMap.values()) {
+            emitInitializationIfNecessary(builder, binding);
         }
         builder.append(INDENT).append("}\n\n");
     }
 
-    private void emitInitializationIfNecessary(StringBuilder builder, PrefBinding bindion) {
-        Collection<InitBinding> initializationBindings = collectInitializationBindings(bindion);
+    private void emitInitializationIfNecessary(StringBuilder builder, PrefBinding bindings) {
+        Collection<Binding> initializationBindings = bindings.getInitBindings();
         if (!initializationBindings.isEmpty()) {
-            emitInitialization(builder, bindion, initializationBindings);
+            emitInitialization(builder, bindings, initializationBindings);
         }
+
+        // Bind all widget listeners
+        for(Binding binding : bindings.getListenerBindings()) {
+            final String bindFormat = binding.getWidgetBindingType().listenerCall;
+            if(bindFormat != null) {
+                builder.append(INDENT_2)
+                        .append(String.format(bindFormat, "target." + binding.getName(), '"' + bindings.getKey() + '"'))
+                        .append(";\n");
+            }
+        }
+
+        builder.append("\n");
     }
 
-    private void emitInitialization(StringBuilder builder, PrefBinding bindion, Collection<InitBinding> initializationBindings){
+    private void emitInitialization(StringBuilder builder, PrefBinding binding, Collection<Binding> initializationBindings){
         builder.append(INDENT_2)
                 .append("if (prefs.contains(\"")
-                .append(bindion.getKey())
+                .append(binding.getKey())
                 .append("\")) {\n");
 
-        if(bindion.getType()!=null) {
+        if(binding.getType()!=null) {
             builder.append(INDENT_3);
-            emitInitialValueLoad(builder, bindion);
+            emitInitialValueLoad(builder, binding);
         }
 
-        emitInitializationSetters(builder, bindion.getKey(), initializationBindings);
+        emitInitializationSetters(builder, binding.getKey(), initializationBindings);
         builder.append(INDENT_2).append("}");
-        emitDefaultInitialization(builder, bindion, initializationBindings);
-        builder.append("\n\n");
+        emitDefaultInitialization(builder, binding, initializationBindings);
+        builder.append("\n");
     }
 
-    private void emitDefaultInitialization(StringBuilder builder, PrefBinding bindion, Collection<InitBinding> initializationBindings){
-        final String defaultFieldName = bindion.getDefaultStaticField();
+    private void emitDefaultInitialization(StringBuilder builder, PrefBinding binding, Collection<Binding> initializationBindings){
+        final String defaultFieldName = binding.getDefaultStaticField();
         if(defaultFieldName!=null) {
             builder.append(" else {\n");
             emitInitializationSetters(builder, defaultFieldName, initializationBindings);
@@ -208,42 +223,32 @@ public class PrefValueBinder {
         }
     }
 
-    private Collection<InitBinding> collectInitializationBindings(PrefBinding bindion){
-        Collection<InitBinding> initializationBindings = new LinkedHashSet<>();
-        for (Binding binding : bindion.getBindings()) {
-            if(binding instanceof InitBinding){
-                initializationBindings.add((InitBinding)binding);
-            }
-        }
-        return initializationBindings;
-    }
-
-    private void emitInitializationSetters(StringBuilder builder, String assignment, Collection<InitBinding> initializationBindings) {
+    private void emitInitializationSetters(StringBuilder builder, String assignment, Collection<Binding> initializationBindings) {
         // Update fields before making method calls
-        for (InitBinding binding : initializationBindings) {
-            if(binding.getBindingType()== ElementType.FIELD) {
+        for (Binding binding : initializationBindings) {
+            if(binding.getBindingType() == ElementType.FIELD) {
                 builder.append(INDENT_3);
                 emitFieldUpdate(builder, assignment, binding);
             }
         }
-        for (InitBinding binding : initializationBindings) {
-            if(binding.getBindingType()== ElementType.METHOD) {
+        for (Binding binding : initializationBindings) {
+            if(binding.getBindingType() == ElementType.METHOD) {
                 builder.append(INDENT_3);
                 emitMethodCall(builder, assignment, binding);
             }
         }
     }
 
-    private void emitInitialValueLoad(StringBuilder builder, PrefBinding bindion){
-        builder.append(bindion.getType().getFieldTypeDef())
+    private void emitInitialValueLoad(StringBuilder builder, PrefBinding binding){
+        builder.append(binding.getType().getFieldTypeDef())
                 .append(" ")
-                .append(bindion.getKey())
+                .append(binding.getKey())
                 .append(" = prefs.")
-                .append(bindion.getType().getSharedPrefsMethodName())
+                .append(binding.getType().getSharedPrefsMethodName())
                 .append("(\"")
-                .append(bindion.getKey())
+                .append(binding.getKey())
                 .append("\", ")
-                .append(bindion.getType().getDefaultValue())
+                .append(binding.getType().getDefaultValue())
                 .append(");\n");
     }
 
@@ -264,18 +269,18 @@ public class PrefValueBinder {
         if(hasListenerBindings) {
             builder.append(INDENT)
                     .append("private void updateTarget(T target, SharedPreferences prefs, String key) {\n");
-            emitListenerBindions(builder);
+            emitListenerbindings(builder);
             builder.append("\n")
                     .append(INDENT)
                     .append("};\n\n");
         }
     }
 
-    private void emitListenerBindions(StringBuilder builder){
+    private void emitListenerbindings(StringBuilder builder){
         boolean hasStartedIfBlock = false;
 
-        for (PrefBinding bindion : prefKeyMap.values()) {
-            Collection<PrefListenerBinding> bindings = collectListenerBindings(bindion);
+        for (PrefBinding binding : prefKeyMap.values()) {
+            Collection<Binding> bindings = binding.getListenerBindings();
 
             if(!bindings.isEmpty()) {
                 if (hasStartedIfBlock) {
@@ -284,18 +289,18 @@ public class PrefValueBinder {
                     builder.append(INDENT_2);
                     hasStartedIfBlock = true;
                 }
-                emitListenerBindionIfBlock(builder, bindion, bindings);
+                emitListenerbindingIfBlock(builder, binding, bindings);
             }
         }
     }
 
     private void emitStopListeningMethod(StringBuilder builder){
         builder.append(INDENT)
-                .append("@Override public void stopListening(T target) {\n");
+                .append("@Override public void unbind(T target) {\n");
 
         // Emit a call to the superclass, if any.
         if (parentBinder != null) {
-            builder.append(INDENT_2).append("super.stopListening(target);\n\n");
+            builder.append(INDENT_2).append("super.unbind(target);\n\n");
         }
 
         if(hasListenerBindings) {
@@ -309,39 +314,51 @@ public class PrefValueBinder {
                     .append("prefs.unregisterOnSharedPreferenceChangeListener(listener);\n")
                     .append(INDENT_2)
                     .append("}\n");
+
+            // Un-bind all widget listeners
+            for (PrefBinding prefKeyBinding : prefKeyMap.values()) {
+                for(Binding binding : prefKeyBinding.getListenerBindings()) {
+                    final String unbindFormat = binding.getWidgetBindingType().listenerUnbind;
+                    if(unbindFormat != null) {
+                        builder.append(INDENT_2)
+                                .append(String.format(unbindFormat, "target." + binding.getName()))
+                                .append(";\n");
+                    }
+                }
+            }
         }
 
         builder.append(INDENT).append("}\n\n");
     }
 
-    private void emitListenerBindionIfBlock(StringBuilder builder, PrefBinding bindion, Collection<PrefListenerBinding> bindings){
+    private void emitListenerbindingIfBlock(StringBuilder builder, PrefBinding binding, Collection<Binding> bindings){
         builder.append("if (key.equals(\"")
-                .append(bindion.getKey())
+                .append(binding.getKey())
                 .append("\")) {\n");
-        emitListenerBindion(builder, bindion, bindings);
+        emitListenerBinding(builder, binding, bindings);
         builder.append(INDENT_2).append("}");
     }
 
-    private void emitListenerBindion(StringBuilder builder, PrefBinding bindion, Collection<PrefListenerBinding> bindings){
+    private void emitListenerBinding(StringBuilder builder, PrefBinding binding, Collection<Binding> bindings){
         builder.append(INDENT_3)
                 .append("if (prefs.contains(\"")
-                .append(bindion.getKey())
+                .append(binding.getKey())
                 .append("\")) {\n");
 
-        if(bindion.getType()!=null) {
+        if(binding.getType()!=null) {
             builder.append(INDENT_4);
-            emitInitialValueLoad(builder, bindion);
+            emitInitialValueLoad(builder, binding);
         }
 
-        emitListenerBindings(builder, bindion.getKey(), bindings);
+        emitListenerBindings(builder, binding.getKey(), bindings);
         builder.append(INDENT_3).append("}");
-        emitListenerDefaultAssignment(builder, bindion, bindings);
+        emitListenerDefaultAssignment(builder, binding, bindings);
         builder.append("\n");
         emitEmptyValueListenerBindings(builder, bindings);
     }
 
-    private void emitListenerDefaultAssignment(StringBuilder builder, PrefBinding bindion, Collection<PrefListenerBinding> bindings){
-        final String defaultFieldName = bindion.getDefaultStaticField();
+    private void emitListenerDefaultAssignment(StringBuilder builder, PrefBinding binding, Collection<Binding> bindings){
+        final String defaultFieldName = binding.getDefaultStaticField();
         if(defaultFieldName!=null) {
             builder.append(" else {\n");
             emitListenerBindings(builder, defaultFieldName, bindings);
@@ -349,15 +366,15 @@ public class PrefValueBinder {
         }
     }
 
-    private void emitListenerBindings(StringBuilder builder, String assignment, Collection<PrefListenerBinding> bindings) {
+    private void emitListenerBindings(StringBuilder builder, String assignment, Collection<Binding> bindings) {
         // Update fields before method calls
-        for (PrefListenerBinding binding : bindings) {
+        for (Binding binding : bindings) {
             if(binding.getBindingType() == ElementType.FIELD) {
                 builder.append(INDENT_4);
                 emitFieldUpdate(builder, assignment, binding);
             }
         }
-        for (PrefListenerBinding binding : bindings) {
+        for (Binding binding : bindings) {
             if(binding.getBindingType() == ElementType.METHOD && binding.getType()!=null) {
                 builder.append(INDENT_4);
                 emitMethodCall(builder, assignment, binding);
@@ -365,8 +382,8 @@ public class PrefValueBinder {
         }
     }
 
-    private void emitEmptyValueListenerBindings(StringBuilder builder, Collection<PrefListenerBinding> bindings) {
-        for (PrefListenerBinding binding : bindings) {
+    private void emitEmptyValueListenerBindings(StringBuilder builder, Collection<Binding> bindings) {
+        for (Binding binding : bindings) {
             if(binding.getBindingType() == ElementType.METHOD && binding.getType()==null) {
                 builder.append(INDENT_3);
                 emitMethodCall(builder, null, binding);
@@ -374,22 +391,11 @@ public class PrefValueBinder {
         }
     }
 
-    private Collection<PrefListenerBinding> collectListenerBindings(PrefBinding bindion){
-        Collection<PrefListenerBinding> prefListenerBindings = new LinkedHashSet<>();
-        for (Binding binding : bindion.getBindings()) {
-            if(binding instanceof PrefListenerBinding){
-                prefListenerBindings.add((PrefListenerBinding)binding);
-            }
-        }
-        return prefListenerBindings;
-    }
-
     private void emitFieldUpdate(StringBuilder builder, String assignment, Binding binding){
-        builder.append("target.")
-                .append(binding.getName())
-                .append(" = ")
-                .append(assignment)
-                .append(";\n");
+        final String bindingFormat = binding.getWidgetBindingType().bindingCall;
+        final String targetName = "target." + binding.getName();
+
+        builder.append(String.format(bindingFormat, targetName, assignment)).append(";\n");
     }
 
     private void emitMethodCall(StringBuilder builder, String assignment, Binding binding){

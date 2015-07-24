@@ -8,7 +8,8 @@ public class PrefBinding {
     private final String key;
     private PrefType type;
     private final String defaultStaticField;
-    private final Set<Binding> bindings = new LinkedHashSet<>();
+    private final Set<Binding> initBindings = new LinkedHashSet<>();
+    private final Set<Binding> listenerBindings = new LinkedHashSet<>();
 
     PrefBinding(String key, PrefType type, String defaultField) {
         this.key = key;
@@ -32,12 +33,20 @@ public class PrefBinding {
         return defaultStaticField;
     }
 
-    public Collection<Binding> getBindings() {
-        return bindings;
+    public Collection<Binding> getInitBindings() {
+        return initBindings;
     }
 
-    public void addBinding(Binding binding) {
-        bindings.add(binding);
+    public Collection<Binding> getListenerBindings() {
+        return listenerBindings;
+    }
+
+    public void addInitBinding(Binding binding) {
+        initBindings.add(binding);
+    }
+
+    public void addListenerBinding(Binding binding) {
+        listenerBindings.add(binding);
     }
 
 }

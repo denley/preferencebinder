@@ -2,15 +2,38 @@ package me.denley.preferencebinder.internal;
 
 import java.lang.annotation.ElementType;
 
-/** A field or method view injection binding. */
-interface Binding {
-    /** A description of the binding in human readable form (e.g., "field 'foo'"). */
-    String getDescription();
+/** A single field or method binding. */
+class Binding {
 
-    String getName();
+    private final String name;
+    private final String type;
+    private final ElementType elementType;
+    private final WidgetBindingType bindingType;
 
-    String getType();
+    public Binding(String name, String type, ElementType elementType, WidgetBindingType bindingType) {
+        this.name = name;
+        this.type = type;
+        this.elementType = elementType;
+        this.bindingType = bindingType;
+    }
 
-    ElementType getBindingType();
+    /** The name of the field or method */
+    String getName(){
+        return name;
+    }
+
+    /** The fully qualified object type of the field or method parameter (or primative) */
+    String getType(){
+        return type;
+    }
+
+    /** Either ElementType.FIELD or ElementType.METHOD */
+    ElementType getBindingType(){
+        return elementType;
+    }
+
+    WidgetBindingType getWidgetBindingType() {
+        return bindingType;
+    }
 
 }
