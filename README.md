@@ -87,7 +87,7 @@ Default values apply to your entire application, so you don't need to specify th
 #### Widget Binding
 Preference values can also be bound directly into some standard Android widgets.
 
-For example, in the following code will automatically load the preference value for the key "sensitivity" and apply it to the `SeekBar` through its `setProgress' method.
+For example, in the following code will automatically load the preference value for the key "sensitivity" and apply it to the `SeekBar` through its `setProgress` method.
 ```java
 @BindPref(value = "sensitivity", bindTo = WidgetBindingType.SEEKBAR_PROGRESS)
 SeekBar sensitivity;
