@@ -92,6 +92,15 @@ Add the following line to the gradle dependencies for your module.
 compile 'me.denley.preferenceinjector:PreferenceInjector:2.2.1'
 ```
 
+If you are using any other annotation processors in your application (e.g. Dagger, ButterKnife, etc.) then you will also need to add the following to your module's build.gradle file:
+```groovy
+android {
+    packagingOptions {
+        exclude 'META-INF/services/javax.annotation.processing.Processor'
+    }
+}
+```
+
 ProGuard
 --------
 
