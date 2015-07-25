@@ -21,6 +21,6 @@ allprojects {
 ext {
     VERSION_NAME = '3.0.0'
     VERSION_CODE = 7
-    GROUP_ID = "me.denley"
-    ARTFACT_ID = 'preferencebinder'
+    GROUP_ID = "me.denley.preferenceinjector"
+    ARTIFACT_ID = 'PreferenceInjector'
 }
