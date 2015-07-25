@@ -9,31 +9,31 @@ public enum WidgetBindingType {
             null
     ),
     ACTIVATED(
-            "boolean",
+            PrefType.BOOLEAN,
             "%s.setActivated(%s)",
             null,
             null
     ),
     ENABLED(
-            "boolean",
+            PrefType.BOOLEAN,
             "%s.setEnabled(%s)",
             null,
             null
     ),
     SELECTED(
-            "boolean",
+            PrefType.BOOLEAN,
             "%s.setSelected(%s)",
             null,
             null
     ),
     VISIBILITY(
-            "boolean",
+            PrefType.BOOLEAN,
             "%s.setVisibility(%s ? android.view.View.VISIBLE : android.view.View.GONE)",
             null,
             null
     ),
     CHECKED(
-            "boolean",
+            PrefType.BOOLEAN,
 
             "%s.setChecked(%s)",
 
@@ -46,19 +46,19 @@ public enum WidgetBindingType {
             "%s.setOnCheckedChangeListener(null)"
     ),
     TEXT(
-            "java.lang.String",
+            PrefType.STRING,
             "%s.setText(%s)",
             null,
             null
     ),
     PROGRESS(
-            "int",
+            PrefType.INTEGER,
             "%s.setProgress(%s)",
             null,
             null
     ),
     SEEKBAR_PROGRESS(
-            "int",
+            PrefType.INTEGER,
 
             "%s.setProgress(%s)",
 
@@ -73,18 +73,18 @@ public enum WidgetBindingType {
             "%s.setOnSeekBarChangeListener(null)"
     ),
     MAX_PROGRESS(
-            "int",
+            PrefType.INTEGER,
             "%s.setMax(%s)",
             null,
             null
     );
 
-    public final String prefType;
+    public final PrefType prefType;
     public final String bindingCall;
     public final String listenerCall;
     public final String listenerUnbind;
 
-    WidgetBindingType(String prefType, String bindingCall, String listenerCall, String listenerUnbind) {
+    WidgetBindingType(PrefType prefType, String bindingCall, String listenerCall, String listenerUnbind) {
         this.prefType = prefType;
         this.bindingCall = bindingCall;
         this.listenerCall = listenerCall;

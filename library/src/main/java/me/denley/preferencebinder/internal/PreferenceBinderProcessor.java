@@ -197,7 +197,7 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
             if(annotation.bindTo().prefType == null) {
                 type = annotatedElement.asType().toString();
             } else {
-                type = annotation.bindTo().prefType;
+                type = annotation.bindTo().prefType.getFieldTypeDef();
             }
         }else {
             // Assemble information on the binding point.

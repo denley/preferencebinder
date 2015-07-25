@@ -339,22 +339,34 @@ public class BinderClassFactory {
         builder.append(INDENT_2).append("}");
     }
 
-    private void emitListenerBinding(StringBuilder builder, PrefBinding binding, Collection<Binding> bindings){
-        builder.append(INDENT_3)
-                .append("if (prefs.contains(\"")
-                .append(binding.getKey())
-                .append("\")) {\n");
+    private void emitListenerBinding(StringBuilder builder, PrefBinding binding, Collection<Binding> bindings) {
+        // Don't bother with the if block if there's nothing to put inside it
+        if(hasNonEmptyBinding(bindings)) {
+            builder.append(INDENT_3)
+                    .append("if (prefs.contains(\"")
+                    .append(binding.getKey())
+                    .append("\")) {\n");
 
-        if(binding.getType()!=null) {
-            builder.append(INDENT_4);
-            emitInitialValueLoad(builder, binding);
+            if (binding.getType() != null) {
+                builder.append(INDENT_4);
+                emitInitialValueLoad(builder, binding);
+            }
+
+            emitListenerBindings(builder, binding.getKey(), bindings);
+            builder.append(INDENT_3).append("}");
+            emitListenerDefaultAssignment(builder, binding, bindings);
+            builder.append("\n");
         }
-
-        emitListenerBindings(builder, binding.getKey(), bindings);
-        builder.append(INDENT_3).append("}");
-        emitListenerDefaultAssignment(builder, binding, bindings);
-        builder.append("\n");
         emitEmptyValueListenerBindings(builder, bindings);
+    }
+
+    private boolean hasNonEmptyBinding(Collection<Binding> bindings) {
+        for(Binding binding : bindings) {
+            if(binding.getBindingType() != ElementType.METHOD || binding.getType() != null) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void emitListenerDefaultAssignment(StringBuilder builder, PrefBinding binding, Collection<Binding> bindings){
@@ -375,7 +387,7 @@ public class BinderClassFactory {
             }
         }
         for (Binding binding : bindings) {
-            if(binding.getBindingType() == ElementType.METHOD && binding.getType()!=null) {
+            if(binding.getBindingType() == ElementType.METHOD && binding.getType() != null) {
                 builder.append(INDENT_4);
                 emitMethodCall(builder, assignment, binding);
             }
