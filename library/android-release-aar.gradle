@@ -8,6 +8,7 @@ def localReleaseDest = "${buildDir}/release/${version}"
 
 task androidJavadocs(type: Javadoc) {
     source = android.sourceSets.main.java.srcDirs
+    failOnError false
     exclude '**/javax/**'
     classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
 }
