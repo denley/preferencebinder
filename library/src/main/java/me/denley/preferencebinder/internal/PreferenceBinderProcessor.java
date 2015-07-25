@@ -1,5 +1,8 @@
 package me.denley.preferencebinder.internal;
 
+import com.sun.source.util.TreePath;
+import com.sun.source.util.Trees;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -44,17 +47,18 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
     public static final String JAVA_PREFIX = "java.";
 
 
-
     private Elements elementUtils;
     private Filer filer;
+    private Trees trees;
 
     private Map<TypeElement, BinderClassFactory> targetClassMap;
-    private Set<String> erasedTargetNames;
+    private Set<String> targetClassNames;
 
     @Override public synchronized void init(ProcessingEnvironment env) {
         super.init(env);
         elementUtils = env.getElementUtils();
         filer = env.getFiler();
+        trees = Trees.instance(env);
     }
 
     @Override public Set<String> getSupportedAnnotationTypes() {
@@ -66,7 +70,7 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
 
     @Override public boolean process(Set<? extends TypeElement> elements, RoundEnvironment env) {
         targetClassMap = new LinkedHashMap<>();
-        erasedTargetNames = new LinkedHashSet<>();
+        targetClassNames = new LinkedHashSet<>();
         BinderClassFactory.clearDefaults();
 
         Map<TypeElement, BinderClassFactory> targetClassMap = findAndParseAnnotations(env);
@@ -93,6 +97,7 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
         findAndParseDefaultFieldNames(env);
         findAndParseBindPreferenceAnnotations(env);
         findAndSetParentBinders();
+        checkForBindingCalls();
         return targetClassMap;
     }
 
@@ -140,9 +145,6 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
         }
 
         BinderClassFactory.addDefault(preferenceKey, name, type, enclosingElement);
-
-        // Add the type-erased version to the valid binding targets set.
-        erasedTargetNames.add(enclosingElement.toString());
     }
 
     private void findAndParseBindPreferenceAnnotations(RoundEnvironment env){
@@ -224,7 +226,7 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
             }
         }
 
-        BinderClassFactory binder = getOrCreateTargetClass(targetClassMap, enclosingElement);
+        BinderClassFactory binder = getOrCreateTargetClass(enclosingElement);
         Binding binding = new Binding(name, type, elementType, annotation.bindTo());
 
         for(String preferenceKey : preferenceKeys) {
@@ -237,11 +239,10 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
         }
 
         // Add the type-erased version to the valid binding targets set.
-        erasedTargetNames.add(enclosingElement.toString());
+        targetClassNames.add(enclosingElement.toString());
     }
 
-    private BinderClassFactory getOrCreateTargetClass(Map<TypeElement, BinderClassFactory> targetClassMap,
-                                                TypeElement enclosingElement) {
+    private BinderClassFactory getOrCreateTargetClass(TypeElement enclosingElement) {
         BinderClassFactory binder = targetClassMap.get(enclosingElement);
         if (binder == null) {
             String targetType = enclosingElement.getQualifiedName().toString();
@@ -272,14 +273,24 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
     }
 
     private void findAndSetParentBinder(Map.Entry<TypeElement, BinderClassFactory> entry) {
-        String parentClassFqcn = findParentFqcn(entry.getKey(), erasedTargetNames);
-        if (parentClassFqcn != null) {
-            entry.getValue().setParentBinder(parentClassFqcn + SUFFIX);
+        String parentClassClassName = findParentClassName(entry.getKey());
+        if (parentClassClassName != null) {
+            entry.getValue().setParentBinder(parentClassClassName + SUFFIX);
         }
     }
 
     /** Finds the parent binder type in the supplied set, if any. */
-    private String findParentFqcn(TypeElement typeElement, Set<String> parents) {
+    private String findParentClassName(TypeElement typeElement) {
+        final TypeElement parentTypeElement = findParentClass(typeElement);
+        if(parentTypeElement == null) {
+            return null;
+        }
+
+        String packageName = getPackageName(parentTypeElement);
+        return packageName + "." + getClassName(parentTypeElement, packageName);
+    }
+
+    private TypeElement findParentClass(TypeElement typeElement) {
         TypeMirror type;
         while (true) {
             type = typeElement.getSuperclass();
@@ -287,11 +298,41 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
                 return null;
             }
             typeElement = (TypeElement) ((DeclaredType) type).asElement();
-            if (parents.contains(typeElement.toString())) {
-                String packageName = getPackageName(typeElement);
-                return packageName + "." + getClassName(typeElement, packageName);
+            if (targetClassNames.contains(typeElement.toString())) {
+                return typeElement;
             }
         }
+    }
+
+    /** Checks to make sure the user has proprely called PreferenceBinder.bind and PreferenceBinder.unbind */
+    private void checkForBindingCalls() {
+        for (Map.Entry<TypeElement, BinderClassFactory> entry : targetClassMap.entrySet()) {
+            if(!classMakesStatementCall(entry.getKey(), BindingCallCodeAnalyzer.STATEMENT_BIND)) {
+                processingEnv.getMessager().printMessage(
+                        ERROR,
+                        "You must call PreferenceBinder.bind(this) in " + entry.getKey().getSimpleName() + " to properly setup preference binding for this class",
+                        entry.getKey());
+            }
+            if(entry.getValue().hasListenerBindings() && !classMakesStatementCall(entry.getKey(), BindingCallCodeAnalyzer.STATEMENT_UNBIND)) {
+                processingEnv.getMessager().printMessage(
+                        ERROR,
+                        "You must call PreferenceBinder.unbind(this) to "+entry.getKey().getSimpleName()+" prevent memory leaks",
+                        entry.getKey());
+            }
+        }
+    }
+
+    private boolean classMakesStatementCall(TypeElement classElement, String statementRegex) {
+        // Check for call in superclass
+        final TypeElement superclassElement = findParentClass(classElement);
+        if(superclassElement != null && classMakesStatementCall(superclassElement, statementRegex)) {
+            return true;
+        }
+
+        final BindingCallCodeAnalyzer analyzer = new BindingCallCodeAnalyzer(statementRegex);
+        final TreePath path = trees.getPath(classElement);
+        analyzer.scan(path, trees);
+        return analyzer.didFindCall();
     }
 
     private boolean isAccessibleAndStatic(Class<? extends Annotation> annotationClass, Element element){

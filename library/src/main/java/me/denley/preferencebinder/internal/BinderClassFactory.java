@@ -61,6 +61,10 @@ public class BinderClassFactory {
         this.parentBinder = parentBinder;
     }
 
+    String getParentBinder() {
+        return parentBinder;
+    }
+
     private PrefBinding getOrCreatePrefBinding(String key, String typeDef) {
         final String defaultTypeDef = defaultTypeMap.get(key);
         if(defaultTypeDef!=null && typeDef!=null && !defaultTypeDef.equals(typeDef)){
@@ -104,7 +108,7 @@ public class BinderClassFactory {
         return builder.toString();
     }
 
-    private boolean hasListenerBindings(){
+    boolean hasListenerBindings(){
         for (PrefBinding binding : prefKeyMap.values()) {
             if(!binding.getListenerBindings().isEmpty()) {
                 return true;
