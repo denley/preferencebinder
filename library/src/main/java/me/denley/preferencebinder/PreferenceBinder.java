@@ -35,71 +35,71 @@ public final class PreferenceBinder {
 
 
     /**
-     * Inject annotated fields and methods in the specified {@link Activity}.
+     * Bind annotated fields and methods in the specified {@link Activity}.
      *
-     * @param target Target activity for field injection.
+     * @param target Target activity for field binding.
      */
     public static void bind(Activity target) {
         bind(target, target);
     }
 
     /**
-     * Inject annotated fields and methods in the specified {@link Service}.
+     * Bind annotated fields and methods in the specified {@link Service}.
      *
-     * @param target Target Service for field injection.
+     * @param target Target Service for field binding.
      */
     public static void bind(Service target) {
         bind(target, target);
     }
 
     /**
-     * Inject annotated fields and methods in the specified {@link View}.
+     * Bind annotated fields and methods in the specified {@link View}.
      *
-     * @param target Target view for field injection.
+     * @param target Target view for field binding.
      */
     public static void bind(View target) {
         bind(target.getContext(), target);
     }
 
     /**
-     * Inject annotated fields and methods in the specified {@link Dialog}.
+     * Bind annotated fields and methods in the specified {@link Dialog}.
      *
-     * @param target Target dialog for field injection.
+     * @param target Target dialog for field binding.
      */
     public static void bind(Dialog target) {
         bind(target.getContext(), target);
     }
 
     /**
-     * Inject annotated fields and methods in the specified {@link Fragment}.
+     * Bind annotated fields and methods in the specified {@link Fragment}.
      *
-     * @param target Target fragment for field injection.
+     * @param target Target fragment for field binding.
      */
     @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     public static void bind(Fragment target) {
         final Context context = target.getActivity();
 
         if(context==null) {
-            throw new IllegalStateException("Fragment must be attached to an Activity before injecting");
+            throw new IllegalStateException("Fragment must be attached to an Activity before binding");
         }
 
         bind(context, target);
     }
 
     /**
-     * Inject annotated fields and methods in the specified {@link Object}.
+     * Bind annotated fields and methods in the specified {@link Object}.
      *
      * @param context The Context to use to load {@link SharedPreferences} values.
-     * @param target Target for field injection.
+     * @param target Target for field binding.
      */
     public static void bind(Context context, Object target){
         bind(context, target, PreferenceManager.getDefaultSharedPreferences(context));
     }
 
     /**
-     * Inject annotated fields and methods in the specified {@link Activity}.
+     * Bind annotated fields and methods in the specified {@link Activity}.
      *
-     * @param target Target for field injection.
+     * @param target Target for field binding.
      * @param prefsFileName The name of the {@link android.content.SharedPreferences} file to use.
      */
     public static void bind(Activity target, String prefsFileName) {
@@ -107,9 +107,9 @@ public final class PreferenceBinder {
     }
 
     /**
-     * Inject annotated fields and methods in the specified {@link Service}.
+     * Bind annotated fields and methods in the specified {@link Service}.
      *
-     * @param target Target Service for field injection.
+     * @param target Target Service for field binding.
      * @param prefsFileName The name of the {@link android.content.SharedPreferences} file to use.
      */
     public static void bind(Service target, String prefsFileName) {
@@ -117,9 +117,9 @@ public final class PreferenceBinder {
     }
 
     /**
-     * Inject annotated fields and methods in the specified {@link Activity}.
+     * Bind annotated fields and methods in the specified {@link Activity}.
      *
-     * @param target Target for field injection.
+     * @param target Target for field binding.
      * @param prefsFileName The name of the {@link android.content.SharedPreferences} file to use.
      */
     public static void bind(View target, String prefsFileName) {
@@ -127,9 +127,9 @@ public final class PreferenceBinder {
     }
 
     /**
-     * Inject annotated fields and methods in the specified {@link Activity}.
+     * Bind annotated fields and methods in the specified {@link Activity}.
      *
-     * @param target Target for field injection.
+     * @param target Target for field binding.
      * @param prefsFileName The name of the {@link android.content.SharedPreferences} file to use.
      */
     public static void bind(Dialog target, String prefsFileName) {
@@ -137,9 +137,9 @@ public final class PreferenceBinder {
     }
 
     /**
-     * Inject annotated fields and methods in the specified {@link Fragment}.
+     * Bind annotated fields and methods in the specified {@link Fragment}.
      *
-     * @param target Target for field injection.
+     * @param target Target for field binding.
      * @param prefsFileName The name of the {@link android.content.SharedPreferences} file to use.
      */
     @TargetApi(Build.VERSION_CODES.HONEYCOMB)
@@ -147,17 +147,17 @@ public final class PreferenceBinder {
         final Context context = target.getActivity();
 
         if(context==null) {
-            throw new IllegalStateException("Fragment must be attached to an Activity before injecting");
+            throw new IllegalStateException("Fragment must be attached to an Activity before binding");
         }
 
         bind(context, target, prefsFileName);
     }
 
     /**
-     * Inject annotated fields and methods in the specified {@link Object}.
+     * Bind annotated fields and methods in the specified {@link Object}.
      *
      * @param context The Context to use to load {@link SharedPreferences} values.
-     * @param target Target for field injection.
+     * @param target Target for field binding.
      * @param prefsFileName The name of the {@link android.content.SharedPreferences} file to use.
      */
     public static void bind(Context context, Object target, String prefsFileName) {
@@ -167,7 +167,7 @@ public final class PreferenceBinder {
     /**
      * Stops receiving preference value changes on the given target.
      *
-     * @param target Target for field injection.
+     * @param target Target for field binding.
      */
     public static void unbind(Object target){
         Class<?> targetClass = target.getClass();
