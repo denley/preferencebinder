@@ -1,7 +1,7 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
-## 3.0.0 - Unreleased
+## 3.0.0 - 2015-07-25
 ### Changed
 - New annotation `@BindPref` replaces both `@InjectPreference` and `@OnPreferenceChanged`. The `listen` flag now defaults to true
 - All instances of "inject", "injector", and "injection" have been replaced with "bind", "binding", and "binding".
