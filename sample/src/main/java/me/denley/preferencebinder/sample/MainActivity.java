@@ -25,7 +25,7 @@ public class MainActivity extends Activity {
     @BindPref(value = "boolean_pref_key", bindTo = WidgetBindingType.CHECKED)
     CheckBox booleanPreferenceDisplay;
 
-    @BindPref(value = "integer_pref_key", bindTo = WidgetBindingType.SEEKBAR_PROGRESS, listen = false)
+    @BindPref(value = "integer_pref_key", bindTo = WidgetBindingType.SEEKBAR_PROGRESS)
     SeekBar integerPreferenceDisplay;
 
     @BindPref(value = "boolean_pref_key", listen = true)
