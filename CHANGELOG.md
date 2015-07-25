@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - `@BindPref` annotation may now be used on certain widget types (fields), to automatically bind the preference value to a widget's method. See README.md for details.
+- Compiler now checks for `PreferenceBinder.bind` and `PreferenceBinder.unbind` (when necessary) method calls in classes with `@BindPref` annotations.
 
 ## 2.2.1 - 2015-03-28
 ### Fixed
