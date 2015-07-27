@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## 3.1.0 - Unreleased
+### Fixed
+- `PreferenceBinder.bind` and `PreferenceBinder.unbind` statement check now looks inside blocks/scopes (e.g. `if` blocks).
+
 ## 3.0.0 - 2015-07-25
 ### Changed
 - New annotation `@BindPref` replaces both `@InjectPreference` and `@OnPreferenceChanged`. The `listen` flag now defaults to true
