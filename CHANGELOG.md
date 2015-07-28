@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 ## 3.1.0 - Unreleased
 ### Fixed
 - `PreferenceBinder.bind` and `PreferenceBinder.unbind` statement check now looks inside blocks/scopes (e.g. `if` blocks).
+- Added `PreferenceBinder.bind(Context context, Object target, SharedPreferences prefs)` to allow testing with mocked `SharedPreferences` files.
 
 ## 3.0.0 - 2015-07-25
 ### Changed
