@@ -1,5 +1,6 @@
 package me.denley.preferencebinder.internal;
 
+import com.sun.source.tree.BlockTree;
 import com.sun.source.tree.ExpressionStatementTree;
 import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.StatementTree;
@@ -29,16 +30,19 @@ public class BindingCallCodeAnalyzer extends TreePathScanner<Object, Trees> {
     }
 
     @Override public Object visitMethod(final MethodTree node, final Trees trees) {
-        for(StatementTree statement : node.getBody().getStatements()) {
-            statement.accept(new TreeScanner<Void, Void>(){
-                @Override
-                public Void visitExpressionStatement(final ExpressionStatementTree node, final Void o) {
-                    if(node.toString().matches(statementRegex)) {
-                        foundCall = true;
+        final BlockTree body = node.getBody();
+        if(body != null) {
+            for (StatementTree statement : body.getStatements()) {
+                statement.accept(new TreeScanner<Void, Void>() {
+                    @Override
+                    public Void visitExpressionStatement(final ExpressionStatementTree node, final Void o) {
+                        if (node.toString().matches(statementRegex)) {
+                            foundCall = true;
+                        }
+                        return super.visitExpressionStatement(node, o);
                     }
-                    return super.visitExpressionStatement(node, o);
-                }
-            }, null);
+                }, null);
+            }
         }
         return super.visitMethod(node, trees);
     }

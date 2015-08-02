@@ -35,6 +35,7 @@ import me.denley.preferencebinder.BindPref;
 import me.denley.preferencebinder.PreferenceDefault;
 
 import static javax.lang.model.element.ElementKind.CLASS;
+import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
@@ -323,6 +324,10 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
     }
 
     private boolean classMakesStatementCall(TypeElement classElement, String statementRegex) {
+        if(classElement.getModifiers().contains(ABSTRACT)) {
+            return true;
+        }
+
         // Check for call in superclass
         final TypeElement superclassElement = findParentClass(classElement);
         if(superclassElement != null && classMakesStatementCall(superclassElement, statementRegex)) {
