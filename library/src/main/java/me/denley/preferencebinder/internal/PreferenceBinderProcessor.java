@@ -1,8 +1,5 @@
 package me.denley.preferencebinder.internal;
 
-import com.sun.source.util.TreePath;
-import com.sun.source.util.Trees;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -35,7 +32,6 @@ import me.denley.preferencebinder.BindPref;
 import me.denley.preferencebinder.PreferenceDefault;
 
 import static javax.lang.model.element.ElementKind.CLASS;
-import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
@@ -50,7 +46,6 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
 
     private Elements elementUtils;
     private Filer filer;
-    private Trees trees;
 
     private Map<TypeElement, BinderClassFactory> targetClassMap;
     private Set<String> targetClassNames;
@@ -59,7 +54,6 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
         super.init(env);
         elementUtils = env.getElementUtils();
         filer = env.getFiler();
-        trees = Trees.instance(env);
     }
 
     @Override public Set<String> getSupportedAnnotationTypes() {
