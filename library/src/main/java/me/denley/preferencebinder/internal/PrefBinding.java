@@ -6,12 +6,12 @@ import java.util.Set;
 
 public class PrefBinding {
     private final String key;
-    private PrefType type;
+    private PreferenceType type;
     private final String defaultStaticField;
     private final Set<Binding> initBindings = new LinkedHashSet<>();
     private final Set<Binding> listenerBindings = new LinkedHashSet<>();
 
-    PrefBinding(String key, PrefType type, String defaultField) {
+    PrefBinding(String key, PreferenceType type, String defaultField) {
         this.key = key;
         this.type = type;
         this.defaultStaticField = defaultField;
@@ -21,11 +21,11 @@ public class PrefBinding {
         return key;
     }
 
-    public PrefType getType() {
+    public PreferenceType getType() {
         return type;
     }
 
-    public void setType(PrefType type) {
+    public void setType(PreferenceType type) {
         this.type = type;
     }
 

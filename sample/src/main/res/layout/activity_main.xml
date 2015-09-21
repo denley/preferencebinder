@@ -32,4 +32,11 @@
         android:max="100"
         />
 
+    <TextView
+        android:id="@+id/user_text"
+        android:layout_marginTop="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        />
+
 </LinearLayout>

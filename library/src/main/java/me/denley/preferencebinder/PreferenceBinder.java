@@ -11,28 +11,12 @@ import android.os.Build;
 import android.preference.PreferenceManager;
 import android.view.View;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-import me.denley.preferencebinder.internal.PreferenceBinderProcessor;
-
+@SuppressWarnings("unused")
 public final class PreferenceBinder {
+
     private PreferenceBinder(){
         throw new AssertionError("Instances are not allowed");
     }
-
-    /** DO NOT USE: Exposed for generated code. */
-    public interface Binder<T> {
-        void bind(Context context, T target, SharedPreferences prefs);
-        void unbind(T target);
-    }
-
-    static final Map<Class<?>, Binder<Object>> BINDERS = new LinkedHashMap<Class<?>, Binder<Object>>();
-    static final Binder<Object> NOP_BINDER = new Binder<Object>() {
-        @Override public void bind(Context context, Object target, SharedPreferences prefs) { }
-        @Override public void unbind(Object target) {}
-    };
-
 
     /**
      * Bind annotated fields and methods in the specified {@link Activity}.
@@ -172,9 +156,15 @@ public final class PreferenceBinder {
     public static void unbind(Object target){
         Class<?> targetClass = target.getClass();
 
-        Binder<Object> binder = BINDERS.get(targetClass);
-        if (binder != null) {
-            binder.unbind(target);
+        try{
+            BinderUtils.Binder<Object> binder = BinderUtils.findBinderForClass(targetClass);
+            if (binder != null) {
+                binder.unbind(target);
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to bind preferences for " + target, e);
         }
     }
 
@@ -192,7 +182,7 @@ public final class PreferenceBinder {
         Class<?> targetClass = target.getClass();
 
         try{
-            Binder<Object> binder = findBinderForClass(targetClass);
+            BinderUtils.Binder<Object> binder = BinderUtils.findBinderForClass(targetClass);
             if (binder != null) {
                 binder.bind(context, target, prefs);
             }
@@ -203,23 +193,109 @@ public final class PreferenceBinder {
         }
     }
 
-    private static Binder<Object> findBinderForClass(Class<?> cls) throws IllegalAccessException, InstantiationException {
-        Binder<Object> binder = BINDERS.get(cls);
-        if (binder != null) {
-            return binder;
-        }
-        String clsName = cls.getName();
-        if (clsName.startsWith(PreferenceBinderProcessor.ANDROID_PREFIX) || clsName.startsWith(PreferenceBinderProcessor.JAVA_PREFIX)) {
-            return NOP_BINDER;
-        }
-        try {
-            Class<?> binderClass = Class.forName(clsName + PreferenceBinderProcessor.SUFFIX);
-            binder = (Binder<Object>) binderClass.newInstance();
-        } catch (ClassNotFoundException e) {
-            binder = findBinderForClass(cls.getSuperclass());
-        }
-        BINDERS.put(cls, binder);
-        return binder;
+    /**
+     * Saves an object to a SharedPreferences file. The object must be of a class
+     * annotated with {@link PrefType}.
+     *
+     * @param context The Context to use to save {@link SharedPreferences} values.
+     * @param prefObject The object to save.
+     */
+    public static void save(Context context, Object prefObject) {
+        save(prefObject, PreferenceManager.getDefaultSharedPreferences(context));
     }
+
+    /**
+     * Saves an object to a SharedPreferences file. The object must be of a class
+     * annotated with {@link PrefType}.
+     *
+     * @param context The Context to use to save {@link SharedPreferences} values.
+     * @param prefObject The object to save.
+     * @param prefsFileName The name of the {@link SharedPreferences} file to save to.
+     */
+    public static void save(Context context, Object prefObject, String prefsFileName) {
+        save(prefObject, context.getSharedPreferences(prefsFileName, Context.MODE_PRIVATE));
+    }
+
+    /**
+     * Saves an object to a SharedPreferences file. The object must be of a class
+     * annotated with {@link PrefType}.
+     *
+     * This method should only be used for unit-testing purposes (by providing a
+     * mocked {@link SharedPreferences} object).
+     *
+     * @param prefObject The object to save.
+     * @param prefs The SharedPreferences object from which to load preference values.
+     */
+    public static void save(Object prefObject, SharedPreferences prefs) {
+        Class<?> prefTypeClass = prefObject.getClass();
+
+        try{
+            BinderUtils.TypeBinder<Object> binder = BinderUtils.findTypeBinderForClass(prefTypeClass);
+            if (binder != null) {
+                final SharedPreferences.Editor editor = prefs.edit();
+
+                binder.save(prefObject, editor);
+
+                if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+                    editor.apply();
+                } else {
+                    editor.commit();
+                }
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to save target object " + prefObject, e);
+        }
+    }
+
+    /**
+     * Loads an object from a SharedPreferences file. The object must be of a class
+     * annotated with {@link PrefType}.
+     *
+     * @param context The Context from which to load the default SharedPreferences file.
+     * @param type The class type of the object to load
+     */
+    public static <T> T load(Context context, Class<T> type) {
+        return load(PreferenceManager.getDefaultSharedPreferences(context), type);
+    }
+
+    /**
+     * Loads an object from a SharedPreferences file. The object must be of a class
+     * annotated with {@link PrefType}.
+     *
+     * @param context The Context from which to load the SharedPreferences file.
+     * @param prefsFileName The name of the preferences file to use to load the object.
+     * @param type The class type of the object to load
+     */
+    public static <T> T load(Context context, String prefsFileName, Class<T> type) {
+        return load(context.getSharedPreferences(prefsFileName, Context.MODE_PRIVATE), type);
+    }
+
+    /**
+     * Loads an object from a SharedPreferences file. The object must be of a class
+     * annotated with {@link PrefType}.
+     *
+     * This method should only be used for unit-testing purposes (by providing a
+     * mocked {@link SharedPreferences} object).
+     *
+     * @param prefs The SharedPreferences object from which to load preference values.
+     * @param type The class type of the object to load
+     */
+    public static <T> T load(SharedPreferences prefs, Class<T> type) {
+        @SuppressWarnings("unchecked")
+        final BinderUtils.TypeBinder<T> binder = (BinderUtils.TypeBinder<T>) BinderUtils.findTypeBinderForClass(type);
+
+        try {
+            final T target = type.newInstance();
+            binder.load(target, prefs);
+            return target;
+        } catch (InstantiationException e) {
+            throw new RuntimeException("Missing default constructor for " + type);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("Unable to instantiate " + type);
+        }
+    }
+
 
 }

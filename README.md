@@ -109,12 +109,32 @@ SEEKBAR_PROGRESS | SeekBar | setProgress | yes
 PROGRESS | ProgressBar | setProgress | no
 MAX_PROGRESS | ProgressBar | setMax | no
 
+#### Structured Types
+
+More complicated types can be saved and loaded as SharedPreferences values using the `@PrefType` annotation, like in the example below. Each field in the class will be saved with its own unique preference key. You can use the `@PrefKey` annotation to manually specify the key for a particular field.
+
+```java
+@PrefType
+public class User {
+    String username;
+    String email;
+    boolean emailVerified;
+    int yearOfBirth;
+
+    // Add getters and setters as appropriate
+    // ...
+}
+```
+
+Objects of the `@PrefType` annotated classes can then be saved/loaded by calling `PreferenceBinder.save` and `PreferenceBinder.load` methods. They can also be bound to fields or methods using the `@BindPrefType` annotation (used in exactly the same way as `@BindPref` annotations).
+
+
 Build Configuration
 --------
 
 Add the following line to the gradle dependencies for your module.
 ```groovy
-compile 'me.denley.preferenceinjector:PreferenceInjector:3.0.2'
+compile 'me.denley.preferenceinjector:PreferenceInjector:3.1.0'
 ```
 
 If you are using any other annotation processors in your application (e.g. Dagger, ButterKnife, etc.) then you will also need to add the following to your module's build.gradle file:
@@ -136,6 +156,7 @@ When using ProGuard, you need to specify that generated classes should be kept, 
 -dontwarn me.denley.preferencebinder.internal.**
 -keep class **$$SharedPreferenceBinder { *; }
 
+-keep @me.denley.preferencebinder.PrefType class * { *; }
 -keepclasseswithmembernames class * {
     @me.denley.preferencebinder.* <fields>;
 }

@@ -9,31 +9,31 @@ public enum WidgetBindingType {
             null
     ),
     ACTIVATED(
-            PrefType.BOOLEAN,
+            PreferenceType.BOOLEAN,
             "%s.setActivated(%s)",
             null,
             null
     ),
     ENABLED(
-            PrefType.BOOLEAN,
+            PreferenceType.BOOLEAN,
             "%s.setEnabled(%s)",
             null,
             null
     ),
     SELECTED(
-            PrefType.BOOLEAN,
+            PreferenceType.BOOLEAN,
             "%s.setSelected(%s)",
             null,
             null
     ),
     VISIBILITY(
-            PrefType.BOOLEAN,
+            PreferenceType.BOOLEAN,
             "%s.setVisibility(%s ? android.view.View.VISIBLE : android.view.View.GONE)",
             null,
             null
     ),
     CHECKED(
-            PrefType.BOOLEAN,
+            PreferenceType.BOOLEAN,
 
             "%s.setChecked(%s)",
 
@@ -46,19 +46,19 @@ public enum WidgetBindingType {
             "%s.setOnCheckedChangeListener(null)"
     ),
     TEXT(
-            PrefType.STRING,
+            PreferenceType.STRING,
             "%s.setText(%s)",
             null,
             null
     ),
     PROGRESS(
-            PrefType.INTEGER,
+            PreferenceType.INTEGER,
             "%s.setProgress(%s)",
             null,
             null
     ),
     SEEKBAR_PROGRESS(
-            PrefType.INTEGER,
+            PreferenceType.INTEGER,
 
             "%s.setProgress(%s)",
 
@@ -73,19 +73,19 @@ public enum WidgetBindingType {
             "%s.setOnSeekBarChangeListener(null)"
     ),
     MAX_PROGRESS(
-            PrefType.INTEGER,
+            PreferenceType.INTEGER,
             "%s.setMax(%s)",
             null,
             null
     );
 
-    public final PrefType prefType;
+    public final PreferenceType preferenceType;
     public final String bindingCall;
     public final String listenerCall;
     public final String listenerUnbind;
 
-    WidgetBindingType(PrefType prefType, String bindingCall, String listenerCall, String listenerUnbind) {
-        this.prefType = prefType;
+    WidgetBindingType(PreferenceType preferenceType, String bindingCall, String listenerCall, String listenerUnbind) {
+        this.preferenceType = preferenceType;
         this.bindingCall = bindingCall;
         this.listenerCall = listenerCall;
         this.listenerUnbind = listenerUnbind;

@@ -7,6 +7,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
+
+import me.denley.preferencebinder.PrefType;
 
 public class BinderClassFactory {
     private static final String INDENT = "    ";
@@ -14,28 +17,12 @@ public class BinderClassFactory {
     private static final String INDENT_3 = "            ";
     private static final String INDENT_4 = "                ";
 
-    private final static Map<String, String> defaultFieldMap = new HashMap<>();
-    private final static Map<String, String> defaultTypeMap = new HashMap<>();
 
-    static void clearDefaults() {
-        defaultFieldMap.clear();
-        defaultTypeMap.clear();
-    }
-
-    static void addDefault(String key, String defaultFieldName, String type, TypeElement enclosingElement) {
-        if(defaultFieldMap.containsKey(key)){
-            throw new IllegalArgumentException("Default value set more than once for \""+key);
-        }
-
-        final String qualifiedFieldCall = enclosingElement.getQualifiedName() + "." + defaultFieldName;
-
-        defaultFieldMap.put(key, qualifiedFieldCall);
-        defaultTypeMap.put(key, type);
-    }
 
 
 
     private final Map<String, PrefBinding> prefKeyMap = new LinkedHashMap<>();
+    private final Map<String, PrefTypeBinding> prefTypeMap = new LinkedHashMap<>();
     private final String classPackage;
     private final String className;
     private final String targetClass;
@@ -53,8 +40,16 @@ public class BinderClassFactory {
         getOrCreatePrefBinding(key, binding.getType()).addInitBinding(binding);
     }
 
+    void addInitTypeBinding(String classType, Binding binding) {
+        getOrCreateTypeBinding(classType).addInitBinding(binding);
+    }
+
     void addListenerBinding(String key, Binding binding) {
         getOrCreatePrefBinding(key, binding.getType()).addListenerBinding(binding);
+    }
+
+    void addListenerTypeBinding(String classType, Binding binding) {
+        getOrCreateTypeBinding(classType).addListenerBinding(binding);
     }
 
     void setParentBinder(String parentBinder) {
@@ -66,24 +61,37 @@ public class BinderClassFactory {
     }
 
     private PrefBinding getOrCreatePrefBinding(String key, String typeDef) {
-        final String defaultTypeDef = defaultTypeMap.get(key);
-        if(defaultTypeDef!=null && typeDef!=null && !defaultTypeDef.equals(typeDef)){
+        final String defaultValue = PrefDefaultManager.getDefault(key);
+        final String defaultTypeDef = PrefDefaultManager.getDefaultType(key);
+
+        if(defaultTypeDef != null && typeDef != null && !defaultTypeDef.equals(typeDef)){
             throw new IllegalArgumentException("Default value type ("+defaultTypeDef
                     +") does not match binding type ("+typeDef+") for \"" + key+"\"");
         }
 
         PrefBinding binding = prefKeyMap.get(key);
         if (binding == null) {
-            binding = new PrefBinding(key, getType(key, typeDef), defaultFieldMap.get(key));
+            binding = new PrefBinding(key, PreferenceType.getType(typeDef), defaultValue);
             prefKeyMap.put(key, binding);
         }else if(binding.getType()==null) {
-            binding.setType(getType(key, typeDef));
+            binding.setType(PreferenceType.getType(typeDef));
         }else if(typeDef!=null && !binding.getType().getFieldTypeDef().equals(typeDef)) {
             throw new IllegalArgumentException("Inconsistent type definitions for key " + key);
         }
 
         return binding;
     }
+
+    private PrefTypeBinding getOrCreateTypeBinding(String classType) {
+        PrefTypeBinding binding = prefTypeMap.get(classType);
+        if (binding == null) {
+            binding = new PrefTypeBinding(classType);
+            prefTypeMap.put(classType, binding);
+        }
+
+        return binding;
+    }
+
 
     String getFqcn() {
         return classPackage + "." + className;
@@ -115,6 +123,12 @@ public class BinderClassFactory {
             }
         }
 
+        for (PrefTypeBinding binding : prefTypeMap.values()) {
+            if(!binding.getListenerBindings().isEmpty()) {
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -124,9 +138,7 @@ public class BinderClassFactory {
         builder.append("import android.content.SharedPreferences;\n");
         builder.append("import android.content.SharedPreferences.OnSharedPreferenceChangeListener;\n");
         builder.append("import java.util.HashMap;\n");
-        if (parentBinder == null) {
-            builder.append("import me.denley.preferencebinder.PreferenceBinder.Binder;\n");
-        }
+        builder.append("import me.denley.preferencebinder.BinderUtils;\n");
         builder.append('\n');
     }
 
@@ -137,7 +149,7 @@ public class BinderClassFactory {
         if (parentBinder != null) {
             builder.append(" extends ").append(parentBinder).append("<T>");
         } else {
-            builder.append(" implements Binder<T>");
+            builder.append(" implements BinderUtils.Binder<T>");
         }
         builder.append(" {\n");
     }
@@ -176,9 +188,15 @@ public class BinderClassFactory {
 
     private void emitInitializationMethod(StringBuilder builder){
         builder.append(INDENT).append("private void initializeTarget(T target, final SharedPreferences prefs) {\n");
+
         for (PrefBinding binding : prefKeyMap.values()) {
             emitInitializationIfNecessary(builder, binding);
         }
+
+        for (PrefTypeBinding binding : prefTypeMap.values()) {
+            emitInitializationIfNecessary(builder, binding);
+        }
+
         builder.append(INDENT).append("}\n\n");
     }
 
@@ -201,6 +219,13 @@ public class BinderClassFactory {
         builder.append("\n");
     }
 
+    private void emitInitializationIfNecessary(StringBuilder builder, PrefTypeBinding bindings) {
+        if (!bindings.getInitBindings().isEmpty()) {
+            emitInitialization(builder, bindings);
+        }
+        builder.append("\n");
+    }
+
     private void emitInitialization(StringBuilder builder, PrefBinding binding, Collection<Binding> initializationBindings){
         builder.append(INDENT_2)
                 .append("if (prefs.contains(\"")
@@ -216,6 +241,86 @@ public class BinderClassFactory {
         builder.append(INDENT_2).append("}");
         emitDefaultInitialization(builder, binding, initializationBindings);
         builder.append("\n");
+    }
+
+    private void emitInitialization(StringBuilder builder, PrefTypeBinding binding){
+        final String varName = binding.getVariableName();
+
+        builder.append(INDENT_2)
+                .append(binding.getClassName())
+                .append(" ")
+                .append(varName)
+                .append(" = new ")
+                .append(binding.getClassName())
+                .append("();\n")
+                .append(INDENT_2)
+                .append("BinderUtils.findTypeBinderForClass(")
+                .append(binding.getClassName())
+                .append(".class)")
+                .append(".load(")
+                .append(varName)
+                .append(", prefs);\n");
+
+        Collection<Binding> initializationBindings = binding.getInitBindings();
+        for (Binding typeBinding : initializationBindings) {
+            if(typeBinding.getBindingType() == ElementType.FIELD) {
+                builder.append(INDENT_2);
+                emitFieldUpdate(builder, varName, typeBinding);
+            }
+        }
+        for (Binding typeBinding : initializationBindings) {
+            if(typeBinding.getBindingType() == ElementType.METHOD) {
+                builder.append(INDENT_2);
+                emitMethodCall(builder, varName, typeBinding);
+            }
+        }
+    }
+
+    private void emitListener(StringBuilder builder, PrefTypeBinding binding){
+        final String varName = binding.getVariableName();
+        final String typeBinderVarName = binding.getVariableName() + "TypeBinder";
+
+        builder.append(INDENT_2)
+                .append("BinderUtils.TypeBinder<Object> ")
+                .append(typeBinderVarName)
+                .append(" = BinderUtils.findTypeBinderForClass(")
+                .append(binding.getClassName())
+                .append(".class);\n")
+                .append(INDENT_2)
+                .append("if(")
+                .append(typeBinderVarName)
+                .append(".containsKey(key)) {\n");
+
+        builder.append(INDENT_3)
+                .append(binding.getClassName())
+                .append(" ")
+                .append(varName)
+                .append(" = new ")
+                .append(binding.getClassName())
+                .append("();\n")
+                .append(INDENT_3)
+                .append(typeBinderVarName)
+                .append(".load(")
+                .append(varName)
+                .append(", prefs);\n");
+
+        final Collection<Binding> listenerBindings = binding.getListenerBindings();
+        for (Binding typeBinding : listenerBindings) {
+            if(typeBinding.getBindingType() == ElementType.FIELD) {
+                builder.append(INDENT_3);
+                emitFieldUpdate(builder, varName, typeBinding);
+            }
+        }
+        for (Binding typeBinding : listenerBindings) {
+            if(typeBinding.getBindingType() == ElementType.METHOD) {
+                builder.append(INDENT_3);
+                emitMethodCall(builder, varName, typeBinding);
+            }
+        }
+
+        builder.append(INDENT_2)
+                .append("}\n\n");
+
     }
 
     private void emitDefaultInitialization(StringBuilder builder, PrefBinding binding, Collection<Binding> initializationBindings){
@@ -248,7 +353,7 @@ public class BinderClassFactory {
                 .append(" ")
                 .append(binding.getKey())
                 .append(" = prefs.")
-                .append(binding.getType().getSharedPrefsMethodName())
+                .append(binding.getType().getSharedPrefsGetterMethod())
                 .append("(\"")
                 .append(binding.getKey())
                 .append("\", ")
@@ -274,8 +379,7 @@ public class BinderClassFactory {
             builder.append(INDENT)
                     .append("private void updateTarget(T target, SharedPreferences prefs, String key) {\n");
             emitListenerbindings(builder);
-            builder.append("\n")
-                    .append(INDENT)
+            builder.append(INDENT)
                     .append("};\n\n");
         }
     }
@@ -294,6 +398,14 @@ public class BinderClassFactory {
                     hasStartedIfBlock = true;
                 }
                 emitListenerbindingIfBlock(builder, binding, bindings);
+            }
+        }
+
+        builder.append("\n\n");
+
+        for(PrefTypeBinding binding : prefTypeMap.values()) {
+            if(!binding.getListenerBindings().isEmpty()) {
+                emitListener(builder, binding);
             }
         }
     }
@@ -422,21 +534,6 @@ public class BinderClassFactory {
             builder.append(assignment);
         }
         builder.append(");\n");
-    }
-
-    private PrefType getType(String key, String typeDef){
-        if(typeDef==null){
-            return null;
-        }
-
-        for(PrefType type:PrefType.values()){
-            if(type.getFieldTypeDef().equals(typeDef)){
-                return type;
-            }
-        }
-
-        throw new IllegalArgumentException("Invalid preference value type ("
-                +typeDef+") for key "+key);
     }
 
 }

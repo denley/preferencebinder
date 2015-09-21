@@ -23,17 +23,19 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.MirroredTypesException;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.tools.JavaFileObject;
 
 import me.denley.preferencebinder.BindPref;
+import me.denley.preferencebinder.BindPrefType;
+import me.denley.preferencebinder.PrefType;
 import me.denley.preferencebinder.PreferenceDefault;
 
 import static javax.lang.model.element.ElementKind.CLASS;
 import static javax.lang.model.element.Modifier.PRIVATE;
-import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
@@ -59,17 +61,31 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
     @Override public Set<String> getSupportedAnnotationTypes() {
         Set<String> supportTypes = new LinkedHashSet<String>();
         supportTypes.add(BindPref.class.getCanonicalName());
+        supportTypes.add(BindPrefType.class.getCanonicalName());
         supportTypes.add(PreferenceDefault.class.getCanonicalName());
+        supportTypes.add(PrefType.class.getCanonicalName());
         return supportTypes;
     }
 
     @Override public boolean process(Set<? extends TypeElement> elements, RoundEnvironment env) {
         targetClassMap = new LinkedHashMap<>();
         targetClassNames = new LinkedHashSet<>();
-        BinderClassFactory.clearDefaults();
+        PrefDefaultManager.clearDefaults();
 
-        Map<TypeElement, BinderClassFactory> targetClassMap = findAndParseAnnotations(env);
+        PrefDefaultManager.findAndParseDefaultFieldNames(processingEnv, env);
 
+        final PrefTypeProcessor prefTypeProcessor = new PrefTypeProcessor(processingEnv, env);
+        prefTypeProcessor.process();
+
+        findAndParseBindPreferenceAnnotations(env);
+        findAndParseBindPrefTypeAnnotations(env);
+        findAndSetParentBinders();
+
+        writeFiles();
+        return true;
+    }
+
+    private void writeFiles() {
         for (Map.Entry<TypeElement, BinderClassFactory> entry : targetClassMap.entrySet()) {
             TypeElement typeElement = entry.getKey();
             BinderClassFactory binder = entry.getValue();
@@ -84,61 +100,6 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
                 error(typeElement, "Unable to write binder for type %s: %s", typeElement, e.getMessage());
             }
         }
-
-        return true;
-    }
-
-    private Map<TypeElement, BinderClassFactory> findAndParseAnnotations(RoundEnvironment env) {
-        findAndParseDefaultFieldNames(env);
-        findAndParseBindPreferenceAnnotations(env);
-        findAndSetParentBinders();
-        return targetClassMap;
-    }
-
-    private void findAndParseDefaultFieldNames(RoundEnvironment env) {
-        Set<? extends Element> defaultFieldNameAnnotations = env.getElementsAnnotatedWith(PreferenceDefault.class);
-        parseDefaultFieldsNames(defaultFieldNameAnnotations);
-    }
-
-    private void parseDefaultFieldsNames(Set<? extends Element> defaultFieldNameAnnotations){
-        for (Element element : defaultFieldNameAnnotations) {
-            parseDefaultFieldNameOrFail(element);
-        }
-    }
-
-    private void parseDefaultFieldNameOrFail(Element annotatedElement) {
-        try {
-            parseDefaultFieldName(annotatedElement);
-        } catch (Exception e) {
-            StringWriter stackTrace = new StringWriter();
-            e.printStackTrace(new PrintWriter(stackTrace));
-
-            error(annotatedElement, "Unable to load default preference value from @PreferenceDefault.\n\n%s", stackTrace);
-        }
-    }
-
-    private void parseDefaultFieldName(Element annotatedElement) {
-        if (isAccessibleAndStatic(PreferenceDefault.class, annotatedElement)) {
-            return;
-        }
-
-        // Assemble information on the binding point.
-        TypeElement enclosingElement = (TypeElement) annotatedElement.getEnclosingElement();
-        final PreferenceDefault annotation = annotatedElement.getAnnotation(PreferenceDefault.class);
-        String preferenceKey = annotation.value();
-        String name = annotatedElement.getSimpleName().toString();
-        String type = annotatedElement.asType().toString();
-
-        // Check that the target is a field
-        if(!annotatedElement.getKind().isField()){
-            error(annotatedElement,
-                    "Only fields can be annotate with @PreferenceDefault (%s.%s)",
-                    enclosingElement.getQualifiedName(),
-                    name);
-            return;
-        }
-
-        BinderClassFactory.addDefault(preferenceKey, name, type, enclosingElement);
     }
 
     private void findAndParseBindPreferenceAnnotations(RoundEnvironment env){
@@ -164,7 +125,7 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
     }
 
     private void parseBindPreference(Element annotatedElement) {
-        if (bindPreferenceAnnotationHasError(annotatedElement)) {
+        if (bindPreferenceAnnotationHasError(annotatedElement, BindPref.class)) {
             return;
         }
 
@@ -190,10 +151,10 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
                 return;
             }
 
-            if(annotation.bindTo().prefType == null) {
+            if(annotation.bindTo().preferenceType == null) {
                 type = annotatedElement.asType().toString();
             } else {
-                type = annotation.bindTo().prefType.getFieldTypeDef();
+                type = annotation.bindTo().preferenceType.getFieldTypeDef();
             }
         }else {
             // Assemble information on the binding point.
@@ -236,6 +197,113 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
         targetClassNames.add(enclosingElement.toString());
     }
 
+    private void findAndParseBindPrefTypeAnnotations(RoundEnvironment env){
+        final Set<? extends Element> bindPreferenceAnnotations = env.getElementsAnnotatedWith(BindPrefType.class);
+        parseBindPrefTypeAnnotations(bindPreferenceAnnotations);
+    }
+
+    private void parseBindPrefTypeAnnotations(final Set<? extends Element> bindPreferenceAnnotations) {
+        for(Element element : bindPreferenceAnnotations) {
+            parseBindPrefTypeOrFail(element);
+        }
+    }
+
+    private void parseBindPrefTypeOrFail(Element annotatedElement) {
+        try {
+            parseBindPrefType(annotatedElement);
+        } catch (Exception e) {
+            StringWriter stackTrace = new StringWriter();
+            e.printStackTrace(new PrintWriter(stackTrace));
+
+            error(annotatedElement, "Unable to generate preference binder for @BindPrefType.\n\n%s", stackTrace);
+        }
+    }
+
+    private void parseBindPrefType(Element annotatedElement) {
+        if (bindPreferenceAnnotationHasError(annotatedElement, BindPrefType.class)) {
+            return;
+        }
+
+        // Assemble information on the binding point.
+        final TypeElement enclosingElement = (TypeElement) annotatedElement.getEnclosingElement();
+        final BindPrefType annotation = annotatedElement.getAnnotation(BindPrefType.class);
+        final List<? extends TypeMirror> classes;
+        try {
+            annotation.value(); // this should throw
+            throw new RuntimeException("Unable to get class types from annotation");
+        } catch(MirroredTypesException mte) {
+            classes =  mte.getTypeMirrors();
+        }
+
+        final String name = annotatedElement.getSimpleName().toString();
+
+        final boolean isField = annotatedElement.getKind().isField();
+        final ElementType elementType = isField ? ElementType.FIELD : ElementType.METHOD;
+        String type;
+
+        if(!annotation.init() && !annotation.listen()) {
+            error(annotatedElement, "@BindPrefType binding has no effect (it should either initialize or listen)", enclosingElement.getQualifiedName(), name);
+            return;
+        } else if(isField){
+            if(classes.size() > 1) {
+                error(annotatedElement, "Multiple class types are only allowed for @BindPrefType method annotations (not fields)", enclosingElement.getQualifiedName(), name);
+                return;
+            }
+
+            type = annotatedElement.asType().toString();
+            if (classes.size() > 0) {
+                if(!classes.get(0).toString().equals(type)) {
+                    error(annotatedElement, "Specified type does not match field type", enclosingElement.getQualifiedName(), name);
+                    return;
+                }
+            }
+        }else {
+            // Assemble information on the binding point.
+            ExecutableElement executableElement = (ExecutableElement) annotatedElement;
+            List<? extends VariableElement> params = executableElement.getParameters();
+
+            if(classes.size() > 1) {
+                if(params.size() > 0) {
+                    error(annotatedElement, "@BindPrefType method annotations with multiple class types can not have method parameters", enclosingElement.getQualifiedName(), name);
+                    return;
+                }
+                type = null;
+            } else {
+                type = params.get(0).asType().toString();
+                if (classes.size() > 0) {
+                    if(!classes.get(0).toString().equals(type)) {
+                        error(annotatedElement, "Specified type does not match method parameter type", enclosingElement.getQualifiedName(), name);
+                        return;
+                    }
+                }
+            }
+        }
+
+        BinderClassFactory binder = getOrCreateTargetClass(enclosingElement);
+        Binding binding = new Binding(name, type, elementType, WidgetBindingType.ASSIGN);
+
+        if(classes.isEmpty()) {
+            if (annotation.init()) {
+                binder.addInitTypeBinding(type, binding);
+            }
+            if (annotation.listen()) {
+                binder.addListenerTypeBinding(type, binding);
+            }
+        } else{
+            for (TypeMirror classType : classes) {
+                if (annotation.init()) {
+                    binder.addInitTypeBinding(classType.toString(), binding);
+                }
+                if (annotation.listen()) {
+                    binder.addListenerTypeBinding(classType.toString(), binding);
+                }
+            }
+        }
+
+        // Add the type-erased version to the valid binding targets set.
+        targetClassNames.add(enclosingElement.toString());
+    }
+
     private BinderClassFactory getOrCreateTargetClass(TypeElement enclosingElement) {
         BinderClassFactory binder = targetClassMap.get(enclosingElement);
         if (binder == null) {
@@ -250,14 +318,14 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
         return binder;
     }
 
-    private static String getClassName(TypeElement type, String packageName) {
+    static String getClassName(TypeElement type, String packageName) {
         int packageLen = packageName.length() + 1;
         return type.getQualifiedName().toString().substring(packageLen).replace('.', '$');
     }
 
-    private boolean bindPreferenceAnnotationHasError(Element element){
-        return isInaccessibleViaGeneratedCode(BindPref.class, element)
-                || isBindingInWrongPackage(BindPref.class, element);
+    private boolean bindPreferenceAnnotationHasError(Element element, Class<? extends Annotation> annotationClass){
+        return isInaccessibleViaGeneratedCode(annotationClass, element)
+                || isBindingInWrongPackage(annotationClass, element);
     }
 
     private void findAndSetParentBinders(){
@@ -296,38 +364,6 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
                 return typeElement;
             }
         }
-    }
-
-    private boolean isAccessibleAndStatic(Class<? extends Annotation> annotationClass, Element element){
-        boolean hasError = false;
-        TypeElement enclosingElement = (TypeElement) element.getEnclosingElement();
-
-        // Verify method modifiers.
-        Set<Modifier> modifiers = element.getModifiers();
-        if (!modifiers.contains(PUBLIC) || !modifiers.contains(STATIC)) {
-            error(element, "@%s annotated elements must have public and static modifiers. (%s.%s)",
-                    annotationClass.getSimpleName(), enclosingElement.getQualifiedName(),
-                    element.getSimpleName());
-            hasError = true;
-        }
-
-        // Verify containing type.
-        if (enclosingElement.getKind() != CLASS) {
-            error(enclosingElement, "@%s annotated elements may only be contained in classes. (%s.%s)",
-                    annotationClass.getSimpleName(), enclosingElement.getQualifiedName(),
-                    element.getSimpleName());
-            hasError = true;
-        }
-
-        // Verify containing class visibility is not private.
-        if (enclosingElement.getModifiers().contains(PRIVATE)) {
-            error(enclosingElement, "@%s annotated elements may not be contained in private classes. (%s.%s)",
-                    annotationClass.getSimpleName(), enclosingElement.getQualifiedName(),
-                    element.getSimpleName());
-            hasError = true;
-        }
-
-        return hasError;
     }
 
     private boolean isInaccessibleViaGeneratedCode(Class<? extends Annotation> annotationClass, Element element) {

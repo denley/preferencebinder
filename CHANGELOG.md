@@ -2,8 +2,10 @@
 All notable changes to this project will be documented in this file.
 
 ## 3.1.0 - Unreleased
-### Fixed
-- `PreferenceBinder.bind` and `PreferenceBinder.unbind` statement check now looks inside blocks/scopes (e.g. `if` blocks).
+### Added
+- Added `@PrefType` class annotation, to allow saving/loading of structured class types into `SharedPreferences`
+    - Added `@PrefKey` field annotation for fields in `@PrefType` annotated classes, to use a specific key to save/load that field
+    - Added `@BindPrefType` field/method annotation to bind these structured types
 - Added `PreferenceBinder.bind(Context context, Object target, SharedPreferences prefs)` to allow testing with mocked `SharedPreferences` files.
 
 ## 3.0.2 - 2015-08-03
