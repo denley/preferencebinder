@@ -1,12 +1,15 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
-## 3.1.0 - Unreleased
+## 4.0.0 - Unreleased
 ### Added
 - Added `@PrefType` class annotation, to allow saving/loading of structured class types into `SharedPreferences`
     - Added `@PrefKey` field annotation for fields in `@PrefType` annotated classes, to use a specific key to save/load that field
     - Added `@BindPrefType` field/method annotation to bind these structured types
 - Added `PreferenceBinder.bind(Context context, Object target, SharedPreferences prefs)` to allow testing with mocked `SharedPreferences` files.
+
+### Changed
+- `TEXT` widget binding type now automatically saves to user input into the `SharedPreferences` file
 
 ## 3.0.2 - 2015-08-03
 ### Removed

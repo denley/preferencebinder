@@ -104,7 +104,7 @@ ENABLED | View | setEnabled | no
 SELECTED | View | setSelected | no
 VISIBILITY | View | setVisibility (View.VISIBLE or View.GONE) | no
 CHECKED | CompoundButton | setChecked | yes
-TEXT | TextView | setText | no
+TEXT | TextView | setText | yes
 SEEKBAR_PROGRESS | SeekBar | setProgress | yes
 PROGRESS | ProgressBar | setProgress | no
 MAX_PROGRESS | ProgressBar | setMax | no

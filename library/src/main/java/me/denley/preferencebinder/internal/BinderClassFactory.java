@@ -159,6 +159,7 @@ public class BinderClassFactory {
             builder.append(INDENT).append("private HashMap<T, SharedPreferences> prefsMap = new HashMap<T, SharedPreferences>();\n");
             builder.append(INDENT).append("private HashMap<T, OnSharedPreferenceChangeListener> listenerMap = new HashMap<T, OnSharedPreferenceChangeListener>();\n");
         }
+        builder.append(INDENT).append("private HashMap<android.widget.TextView, android.text.TextWatcher> textWatchers = new HashMap<android.widget.TextView, android.text.TextWatcher>();\n");
         builder.append("\n");
     }
 
@@ -211,7 +212,7 @@ public class BinderClassFactory {
             final String bindFormat = binding.getWidgetBindingType().listenerCall;
             if(bindFormat != null) {
                 builder.append(INDENT_2)
-                        .append(String.format(bindFormat, "target." + binding.getName(), '"' + bindings.getKey() + '"'))
+                        .append(String.format(bindFormat, "target." + binding.getName(), '"' + bindings.getKey() + '"', binding.getName()))
                         .append(";\n");
             }
         }

@@ -1,5 +1,8 @@
 package me.denley.preferencebinder.internal;
 
+import android.text.Editable;
+import android.text.TextWatcher;
+
 public enum WidgetBindingType {
 
     ASSIGN(
@@ -47,9 +50,23 @@ public enum WidgetBindingType {
     ),
     TEXT(
             PreferenceType.STRING,
+
             "%s.setText(%s)",
-            null,
-            null
+
+            "final android.text.TextWatcher watcher_%3$s = new android.text.TextWatcher() {\n" +
+                    "            @Override\n" +
+                    "            public void beforeTextChanged(final CharSequence s, final int start, final int count, final int after) { }\n" +
+                    "            @Override\n" +
+                    "            public void onTextChanged(final CharSequence s, final int start, final int before, final int count) { }\n" +
+                    "            @Override\n" +
+                    "            public void afterTextChanged(final android.text.Editable s) {\n" +
+                    "               prefs.edit().putString(%2$s, s.toString()).apply();\n" +
+                    "            }\n" +
+                    "        };\n" +
+                    "        %1$s.addTextChangedListener(watcher_%3$s);\n" +
+                    "        textWatchers.put(%1$s, watcher_%3$s)",
+
+            "%s.removeTextChangedListener(textWatchers.get(%1$s))"
     ),
     PROGRESS(
             PreferenceType.INTEGER,
