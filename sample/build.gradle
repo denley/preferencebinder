@@ -26,5 +26,5 @@ android {
 dependencies {
     compile project(':library')
     provided project(':library')
-    //compile 'me.denley:preferencebinder:' + project.VERSION_NAME
+//    compile(group: project.GROUP_ID, name: project.ARTIFACT_ID, version: project.VERSION_NAME, ext: 'pom')
 }

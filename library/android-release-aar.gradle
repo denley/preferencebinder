@@ -1,7 +1,7 @@
 apply plugin: 'maven'
 
 def groupId = project.GROUP_ID
-def artifactId = project.ARTFACT_ID
+def artifactId = project.ARTIFACT_ID
 def version = project.VERSION_NAME
 
 def localReleaseDest = "${buildDir}/release/${version}"

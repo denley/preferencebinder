@@ -1,8 +1,5 @@
 package me.denley.preferencebinder.internal;
 
-import com.sun.source.util.TreePath;
-import com.sun.source.util.Trees;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -49,7 +46,6 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
 
     private Elements elementUtils;
     private Filer filer;
-    private Trees trees;
 
     private Map<TypeElement, BinderClassFactory> targetClassMap;
     private Set<String> targetClassNames;
@@ -58,7 +54,6 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
         super.init(env);
         elementUtils = env.getElementUtils();
         filer = env.getFiler();
-        trees = Trees.instance(env);
     }
 
     @Override public Set<String> getSupportedAnnotationTypes() {
@@ -97,7 +92,6 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
         findAndParseDefaultFieldNames(env);
         findAndParseBindPreferenceAnnotations(env);
         findAndSetParentBinders();
-        checkForBindingCalls();
         return targetClassMap;
     }
 
@@ -302,37 +296,6 @@ public class PreferenceBinderProcessor extends AbstractProcessor {
                 return typeElement;
             }
         }
-    }
-
-    /** Checks to make sure the user has proprely called PreferenceBinder.bind and PreferenceBinder.unbind */
-    private void checkForBindingCalls() {
-        for (Map.Entry<TypeElement, BinderClassFactory> entry : targetClassMap.entrySet()) {
-            if(!classMakesStatementCall(entry.getKey(), BindingCallCodeAnalyzer.STATEMENT_BIND)) {
-                processingEnv.getMessager().printMessage(
-                        ERROR,
-                        "You must call PreferenceBinder.bind(this) in " + entry.getKey().getSimpleName() + " to properly setup preference binding for this class",
-                        entry.getKey());
-            }
-            if(entry.getValue().hasListenerBindings() && !classMakesStatementCall(entry.getKey(), BindingCallCodeAnalyzer.STATEMENT_UNBIND)) {
-                processingEnv.getMessager().printMessage(
-                        ERROR,
-                        "You must call PreferenceBinder.unbind(this) to "+entry.getKey().getSimpleName()+" prevent memory leaks",
-                        entry.getKey());
-            }
-        }
-    }
-
-    private boolean classMakesStatementCall(TypeElement classElement, String statementRegex) {
-        // Check for call in superclass
-        final TypeElement superclassElement = findParentClass(classElement);
-        if(superclassElement != null && classMakesStatementCall(superclassElement, statementRegex)) {
-            return true;
-        }
-
-        final BindingCallCodeAnalyzer analyzer = new BindingCallCodeAnalyzer(statementRegex);
-        final TreePath path = trees.getPath(classElement);
-        analyzer.scan(path, trees);
-        return analyzer.didFindCall();
     }
 
     private boolean isAccessibleAndStatic(Class<? extends Annotation> annotationClass, Element element){

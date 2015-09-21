@@ -178,7 +178,17 @@ public final class PreferenceBinder {
         }
     }
 
-    private static void bind(Context context, Object target, SharedPreferences prefs){
+    /**
+     * Bind annotated fields and methods in the specified {@link Object}.
+     *
+     * This method should only be used for unit-testing purposes (by providing a
+     * mocked {@link SharedPreferences} object).
+     *
+     * @param context The Context to use to load {@link SharedPreferences} values.
+     * @param target Target for field binding.
+     * @param prefs The SharedPreferences object from which to load preference values.
+     */
+    public static void bind(Context context, Object target, SharedPreferences prefs) {
         Class<?> targetClass = target.getClass();
 
         try{

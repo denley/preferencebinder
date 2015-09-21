@@ -1,7 +1,21 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
-## 3.0.0 - Unreleased
+## 3.1.0 - Unreleased
+### Fixed
+- `PreferenceBinder.bind` and `PreferenceBinder.unbind` statement check now looks inside blocks/scopes (e.g. `if` blocks).
+- Added `PreferenceBinder.bind(Context context, Object target, SharedPreferences prefs)` to allow testing with mocked `SharedPreferences` files.
+
+## 3.0.2 - 2015-08-03
+### Removed
+- Removed compiler check for `PreferenceBinder.bind` and `PreferenceBinder.unbind` method calls pending testing and stability improvement to the feature
+
+## 3.0.1 - 2015-08-02
+### Fixed
+- Fixed NullPointerException when using this library in classes with abstract methods.
+- Updated bind/unbind statement checker to look in scopes inside methods.
+
+## 3.0.0 - 2015-07-25
 ### Changed
 - New annotation `@BindPref` replaces both `@InjectPreference` and `@OnPreferenceChanged`. The `listen` flag now defaults to true
 - All instances of "inject", "injector", and "injection" have been replaced with "bind", "binding", and "binding".
